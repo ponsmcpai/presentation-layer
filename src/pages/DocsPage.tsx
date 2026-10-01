@@ -47,6 +47,9 @@ const ROWS: Record<DocSection, Array<[string, string, string]>> = {
     ['pons_balance', 'token?', 'agent wallet balance (needs key)'],
     ['pons_quote', 'amountUsd', 'USD → USDG base units, no execution'],
     ['pons_pay', 'payTo, amountUsd', 'policy → sign → broadcast → receipt'],
+    ['pons_pay_resource', 'url', 'fetch 402 → parse → settle exact price'],
+    ['pons_v2_launch', 'token', 'pons v2 factory launch record'],
+    ['pons_v2_snipe_tax', 'curve, recipient', 'decaying opening tax read'],
     ['pons_tx_status', 'txHash', 'receipt + decoded transfers'],
   ],
   flow: [],
@@ -181,7 +184,7 @@ ponsmcp`}</Code>
           {/* TOOLS */}
           {active === 'tools' && (
             <div className="mt-10">
-              <H2 id="tools">Tool reference — all 9</H2>
+              <h2 id="tools">Tool reference — all 11</h2>
               <div className="mt-5 overflow-hidden rounded-2xl border border-white/10">
                 <div className="grid grid-cols-[1.1fr_0.9fr_1.6fr] gap-2 border-b border-white/10 bg-white/[0.05] px-4 py-2.5 font-mono text-[10px] uppercase tracking-[0.14em] text-white/40">
                   <span>Tool</span><span>Input</span><span>Returns</span>

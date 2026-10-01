@@ -304,7 +304,7 @@ export function AppPage() {
               ['$MCP token', 'Unannounced', 'No market data until launch'],
               ['Latest block', live.block, 'Robinhood Chain · 4663'],
               ['Network gas', live.gas, 'Gas token: ETH'],
-              ['MCP tools', '9 ready', 'Reads · policy · proof'],
+              ['MCP tools', '11 ready', 'Reads · 402 pay · policy · proof'],
             ].map(([label, value, sub]) => (
               <div key={label} className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-4">
                 <p className="text-[11px] text-white/40">{label}</p>
