@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import './App.css';
 import { ThemeProvider } from '@/hooks/useTheme';
 import { Navbar } from '@/sections/Navbar';
 import { Hero } from '@/sections/Hero';

@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  ArrowLeft, ArrowRight, Check, CheckCircle2, CircleDollarSign, Copy,
-  ExternalLink, FileCheck2, Loader2, Network, ShieldCheck, Wallet,
+  ArrowLeft, ArrowRight, Boxes, Check, CheckCircle2, CircleDollarSign, Copy,
+  ExternalLink, FileCheck2, Gauge, Loader2, Network, Radio, ShieldCheck, Wallet,
 } from 'lucide-react';
 
 const USDG = '0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168';
@@ -34,6 +34,7 @@ type Quote = {
 
 type Live = { block: string; gas: string };
 type IntentRow = { id: string; status: 'pending' | 'paid' | 'failed'; payment: { amount_usdg: string; pay_to: string }; tx_hash: string | null; created_at: string };
+type Service = { id: string; merchant: string; name: string; resource_path: string; price_usdg: string; active: boolean };
 
 function CopyButton({ value }: { value: string }) {
   const [copied, setCopied] = useState(false);
@@ -79,6 +80,7 @@ export function AppPage() {
   const [receiptBusy, setReceiptBusy] = useState(false);
   const [receipt, setReceipt] = useState<{ status: 'success' | 'reverted'; block: string; gas: string; hash: string } | null>(null);
   const [history, setHistory] = useState<IntentRow[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
 
   const refreshLive = useCallback(async () => {
     const retry = async <T,>(work: () => Promise<T>): Promise<T | null> => {
@@ -106,6 +108,14 @@ export function AppPage() {
     } catch { /* activity is non-critical; keep the console usable */ }
   }, []);
   useEffect(() => { void refreshHistory(); }, [refreshHistory]);
+  const refreshServices = useCallback(async () => {
+    try {
+      const response = await fetch('/api/merchant/services');
+      const data = await response.json();
+      if (response.ok && Array.isArray(data.services)) setServices(data.services);
+    } catch { /* empty/unavailable catalog must not block payment creation */ }
+  }, []);
+  useEffect(() => { void refreshServices(); }, [refreshServices]);
 
   const createQuote = async () => {
     setError('');
@@ -217,6 +227,16 @@ export function AppPage() {
             </div>
           ))}
         </div>
+
+        <section className="mc-runtime mb-5">
+          <div className="mc-runtime-head"><div><span className="mc-kicker"><Radio /> AGENT RUNTIME</span><h2>Ready for an agent, not a browser wallet.</h2></div><div className="mc-runtime-live"><span /> Robinhood Chain · 4663</div></div>
+          <div className="mc-runtime-grid">
+            <div><Gauge /><b>Policy-bounded</b><p>100 USDG per transaction · 1,000 USDG daily default.</p></div>
+            <div><ShieldCheck /><b>Key boundary</b><p>Private signing stays inside your configured PonsMCP runtime.</p></div>
+            <div><Boxes /><b>Merchant catalog</b><p>{services.length ? `${services.length} registered service${services.length === 1 ? '' : 's'} available.` : 'No public services registered yet.'}</p></div>
+          </div>
+          {services.length > 0 && <div className="mc-service-row">{services.slice(0, 3).map((service) => <button key={service.id} onClick={() => { setMerchant(service.merchant); setAmount(Number(service.price_usdg).toFixed(2)); setQuote(null); }}><span>{service.name}</span><b>{Number(service.price_usdg).toFixed(2)} USDG</b><small>{service.merchant.slice(0, 6)}…{service.merchant.slice(-4)}</small></button>)}</div>}
+        </section>
 
         <div className="rounded-2xl p-4 mb-5 flex flex-wrap items-center gap-5" style={{ background: 'rgba(16, 16, 16,0.62)', border: '1px solid rgba(255,255,255,0.1)' }}>
           <Step number={1} title="Create request" active={!quote} done={!!quote} />
