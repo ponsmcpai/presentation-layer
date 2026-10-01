@@ -114,7 +114,7 @@ export function Navbar() {
                 className="btn-primary px-5 py-2.5 text-sm font-semibold"
                 style={{ borderRadius: '9999px' }}
               >
-                Get Started
+                Open App
               </button>
             </Link>
 
@@ -150,7 +150,7 @@ export function Navbar() {
             ))}
             <Link to="/app" className="block pt-2" onClick={() => setIsMobileMenuOpen(false)}>
               <button className="btn-primary w-full py-2.5 text-sm font-semibold rounded-full">
-                Get Started
+                Open App
               </button>
             </Link>
           </div>

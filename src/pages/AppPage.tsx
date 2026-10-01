@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowLeft, ArrowRight, Boxes, Check, CheckCircle2, CircleDollarSign, Copy,
-  ExternalLink, FileCheck2, Gauge, Loader2, Network, Radio, ShieldCheck, Wallet,
+  ExternalLink, FileCheck2, Gauge, Loader2, Network, Radio, ShieldCheck,
 } from 'lucide-react';
 
 const USDG = '0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168';
@@ -74,8 +74,6 @@ export function AppPage() {
   const [quote, setQuote] = useState<Quote | null>(null);
   const [error, setError] = useState('');
   const [live, setLive] = useState<Live>({ block: '—', gas: '—' });
-  const [wallet, setWallet] = useState<string | null>(null);
-  const [walletBusy, setWalletBusy] = useState(false);
   const [txHash, setTxHash] = useState('');
   const [receiptBusy, setReceiptBusy] = useState(false);
   const [receipt, setReceipt] = useState<{ status: 'success' | 'reverted'; block: string; gas: string; hash: string } | null>(null);
@@ -143,17 +141,6 @@ export function AppPage() {
     } catch (e: any) { setError(e?.message ?? 'Could not create payment intent.'); }
   };
 
-  const connectWallet = async () => {
-    const ethereum = (window as any).ethereum;
-    if (!ethereum) { setError('No browser wallet detected. Install a wallet to view its address; payment signing remains in the PonsMCP server.'); return; }
-    setWalletBusy(true);
-    try {
-      const accounts: string[] = await ethereum.request({ method: 'eth_requestAccounts' });
-      setWallet(accounts[0] ?? null);
-    } catch (e: any) { setError(e?.message ?? 'Wallet connection declined.'); }
-    finally { setWalletBusy(false); }
-  };
-
   const verifyReceipt = async () => {
     setError('');
     setReceipt(null);
@@ -203,14 +190,15 @@ export function AppPage() {
               Create a policy-safe MPP payment request. Your agent quotes in USDG, validates constraints, then executes from your own PonsMCP server with a verifiable on-chain receipt.
             </p>
           </div>
-          <button
-            onClick={connectWallet}
-            disabled={walletBusy}
-            className="btn-primary px-5 py-2.5 text-sm font-semibold rounded-full inline-flex items-center gap-2 disabled:opacity-60"
+          <a
+            href="https://github.com/ponsmcpai/ponsmcp-sdk"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-secondary px-5 py-2.5 text-sm font-semibold rounded-full inline-flex items-center gap-2"
           >
-            {walletBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wallet className="w-4 h-4" />}
-            {wallet ? `${wallet.slice(0, 6)}…${wallet.slice(-4)}` : 'Connect wallet'}
-          </button>
+            <Network className="w-4 h-4" />
+            SDK source
+          </a>
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">

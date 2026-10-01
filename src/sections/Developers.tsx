@@ -44,7 +44,7 @@ export function Developers() {
           >
             Integrate in <span className="gradient-text">minutes</span>
           </h2>
-          <p className="text-lg leading-relaxed" style={{ color: 'hsl(215 18% 52%)' }}>
+          <p className="text-lg leading-relaxed" style={{ color: 'hsl(30 12% 62%)' }}>
             Drop-in integration for autonomous agents. A few lines of code to enable MPP payments with Robinhood Chain settlement.
           </p>
         </div>
@@ -70,7 +70,7 @@ export function Developers() {
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-150"
                     style={{
                       background: activeTab === tab.id ? 'rgba(249,115,22,0.15)' : 'transparent',
-                      color: activeTab === tab.id ? '#fdba74' : 'hsl(215 18% 42%)',
+                      color: activeTab === tab.id ? '#fdba74' : 'hsl(30 10% 48%)',
                       border: activeTab === tab.id ? '1px solid rgba(249,115,22,0.25)' : '1px solid transparent',
                     }}
                   >
@@ -82,7 +82,7 @@ export function Developers() {
               <button
                 onClick={copyToClipboard}
                 className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs transition-colors"
-                style={{ color: 'hsl(215 18% 42%)' }}
+                style={{ color: 'hsl(30 10% 48%)' }}
               >
                 {copied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
                 {copied ? 'Copied!' : 'Copy'}
@@ -108,7 +108,7 @@ export function Developers() {
               <Button
                 variant="outline"
                 className="rounded-lg gap-2"
-                style={{ borderColor: 'rgba(249,115,22,0.22)', backgroundColor: 'rgba(249,115,22,0.06)', color: 'hsl(214 30% 94%)' }}
+                style={{ borderColor: 'rgba(249,115,22,0.22)', backgroundColor: 'rgba(249,115,22,0.06)', color: 'hsl(36 45% 92%)' }}
               >
                 Read the documentation
                 <ExternalLink className="w-4 h-4" />

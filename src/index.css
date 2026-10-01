@@ -6,29 +6,29 @@
 
 @layer base {
   :root {
-    --background: 250 45% 8%;
+    --background: 0 0% 4%;
     --foreground: 0 0% 98%;
-    --card: 248 40% 10%;
+    --card: 0 0% 7%;
     --card-foreground: 0 0% 98%;
-    --popover: 248 42% 9%;
+    --popover: 0 0% 7%;
     --popover-foreground: 0 0% 98%;
-    --primary: 265 75% 58%;
+    --primary: 24 94% 53%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 248 35% 15%;
+    --secondary: 0 0% 12%;
     --secondary-foreground: 0 0% 90%;
-    --muted: 248 35% 14%;
-    --muted-foreground: 248 20% 60%;
-    --accent: 265 75% 58%;
+    --muted: 0 0% 11%;
+    --muted-foreground: 0 0% 62%;
+    --accent: 32 95% 52%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 98%;
-    --border: 260 30% 20%;
-    --input: 260 30% 16%;
-    --ring: 265 75% 58%;
+    --border: 0 0% 18%;
+    --input: 0 0% 13%;
+    --ring: 24 94% 53%;
     --radius: 0.75rem;
-    --pons-purple: 265 75% 58%;
-    --pons-blue:   221 85% 60%;
-    --pons-teal:   182 80% 45%;
+    --pons-orange: 24 94% 53%;
+    --pons-amber: 32 95% 52%;
+    --pons-green: 145 60% 57%;
   }
   html { color-scheme: dark; }
 }
@@ -50,7 +50,7 @@
     background:
       radial-gradient(ellipse 80% 60% at -5% 0%,   rgba(249, 115, 22, 0.42) 0%, transparent 55%),
       radial-gradient(ellipse 60% 50% at 105% 5%,   rgba(251, 146, 60, 0.25) 0%, transparent 55%),
-      radial-gradient(ellipse 50% 40% at 100% 60%,  rgba(82, 208, 128, 0.11) 0%, transparent 55%),
+      radial-gradient(ellipse 50% 40% at 100% 60%,  rgba(249, 115, 22, 0.08) 0%, transparent 55%),
       radial-gradient(ellipse 40% 35% at 5%  90%,   rgba(249, 115, 22, 0.12) 0%, transparent 55%),
       hsl(0, 0%, 4%);
   }
@@ -63,8 +63,8 @@
     z-index: -1;
     pointer-events: none;
     background:
-      radial-gradient(ellipse 120% 40% at 50% 100%, rgba(30, 180, 180, 0.12) 0%, transparent 60%),
-      radial-gradient(ellipse 80%  30% at 50% 0%,   rgba(150, 80, 255, 0.08) 0%, transparent 50%);
+      radial-gradient(ellipse 120% 40% at 50% 100%, rgba(249, 115, 22, 0.10) 0%, transparent 60%),
+      radial-gradient(ellipse 80%  30% at 50% 0%,   rgba(251, 146, 60, 0.07) 0%, transparent 50%);
   }
 
   /* Dot grid - very subtle */

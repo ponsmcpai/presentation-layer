@@ -113,7 +113,7 @@ export function Hero() {
                   style={{ borderRadius: '9999px' }}
                 >
                   <Zap className="w-4 h-4" />
-                  Get Started
+                  Open App
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </Link>
