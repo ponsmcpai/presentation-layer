@@ -9,7 +9,7 @@ const tabs = [
 ];
 
 const codeExamples: Record<string, string> = {
-  python: `from ponsmcp import PonsMCPClient\n\n# Initialize the client\nclient = PonsMCPClient(\n    rpc_url='https://rpc.mainnet.chain.robinhood.com',\n    chain_id=4663,\n    wallet=agent_wallet,\n    policies={\n        'max_per_transaction': 100_000_000,  # 100 USDG (6 decimals)\n        'daily_limit': 1_000_000_000         # 1000 USDG\n    }\n)\n\n# Pay for a resource\nresult = await client.pay_for_resource(\n    url='https://api.example.com/premium/forecast',\n    parameters={'location': 'SF', 'days': 7}\n)\n\nprint(f"Payment finalized: {result.hash}")`,
+  python: `# PonsMCP is TypeScript — use the SDK from Node or Bun:\n\n// pay-for-402-resource.ts\nimport { PonsMCPClient, payForResource } from '@ponsmcp/sdk'\n\nconst client = new PonsMCPClient({\n  privateKey: process.env.PONSMCP_PRIVATE_KEY,\n  policy: { maxPerTx: 100_000_000n, dailyLimit: 1_000_000_000n }, // 100 / 1000 USDG\n})\n\nconst result = await payForResource(\n  client,\n  'https://api.example.com/premium/forecast?location=SF&days=7',\n)\n\nif (result.ok) console.log('paid', result.priceUsdg, '→', result.payment?.txHash)\nelse console.log(result.stage, result.error)`,
 
   json: `{\n  "amount": "5.00",\n  "currency": "USD",\n  "payment_methods": [\n    {\n      "type": "crypto",\n      "blockchain": "robinhood",\n      "chain_id": 4663,\n      "token": "USDG"\n    }\n  ],\n  "settlement": {\n    "hash": "0x5Kx...9mQ",\n    "status": "finalized",\n    "latency_ms": 380\n  }\n}`,
 
