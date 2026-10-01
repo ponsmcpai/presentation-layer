@@ -1,13 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useTheme } from '@/hooks/useTheme';
 import { Menu, X } from 'lucide-react';
 
 const navLinks = [
-  { label: 'Features',   href: '#features' },
-  { label: 'Developers', href: '#developers' },
-  { label: 'Docs',       href: 'https://github.com/jackyixuan/pons-mcp', external: true },
-  { label: 'Team',       href: '#team' },
-  { label: 'GitHub',     href: 'https://github.com/jackyixuan/pons-mcp', external: true },
+  { label: 'Tools',      href: '#tools' },
+  { label: '$MCP',       href: '#token-benefits' },
+  { label: 'Docs',       href: '/docs' },
+  { label: 'Status',     href: '/status' },
 ];
 
 export function Navbar() {
@@ -25,7 +25,7 @@ export function Navbar() {
     <header
       className="fixed top-0 left-0 right-0 z-50 transition-all duration-300"
       style={isScrolled ? {
-        background: 'rgba(18, 8, 48, 0.72)',
+        background: 'rgba(11, 11, 11, 0.72)',
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
         borderBottom: '1px solid rgba(255,255,255,0.08)',
@@ -55,44 +55,68 @@ export function Navbar() {
           {/* Desktop nav */}
           <div className="hidden md:flex items-center gap-0.5">
             {navLinks.map((link) => (
-              <a
-                key={link.label}
-                href={link.href}
-                target={link.external ? '_blank' : undefined}
-                rel={link.external ? 'noopener noreferrer' : undefined}
-                style={{
-                  padding: '0.5rem 1rem',
-                  fontSize: '0.88rem',
-                  fontWeight: 500,
-                  color: 'rgba(255,255,255,0.65)',
-                  borderRadius: '9999px',
-                  transition: 'all 0.15s',
-                  textDecoration: 'none',
-                }}
-                onMouseEnter={e => {
-                  (e.currentTarget as HTMLElement).style.color = 'white';
-                  (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.08)';
-                }}
-                onMouseLeave={e => {
-                  (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.65)';
-                  (e.currentTarget as HTMLElement).style.background = 'transparent';
-                }}
-              >
-                {link.label}
-              </a>
+              link.href === '/docs' ? (
+                <Link
+                  key={link.label}
+                  to="/docs"
+                  style={{
+                    padding: '0.5rem 1rem',
+                    fontSize: '0.88rem',
+                    fontWeight: 500,
+                    color: 'rgba(255,255,255,0.65)',
+                    borderRadius: '9999px',
+                    transition: 'all 0.15s',
+                    textDecoration: 'none',
+                  }}
+                  onMouseEnter={e => {
+                    (e.currentTarget as HTMLElement).style.color = 'white';
+                    (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.08)';
+                  }}
+                  onMouseLeave={e => {
+                    (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.65)';
+                    (e.currentTarget as HTMLElement).style.background = 'transparent';
+                  }}
+                >
+                  {link.label}
+                </Link>
+              ) : (
+                <a
+                  key={link.label}
+                  href={link.href}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    fontSize: '0.88rem',
+                    fontWeight: 500,
+                    color: 'rgba(255,255,255,0.65)',
+                    borderRadius: '9999px',
+                    transition: 'all 0.15s',
+                    textDecoration: 'none',
+                  }}
+                  onMouseEnter={e => {
+                    (e.currentTarget as HTMLElement).style.color = 'white';
+                    (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.08)';
+                  }}
+                  onMouseLeave={e => {
+                    (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.65)';
+                    (e.currentTarget as HTMLElement).style.background = 'transparent';
+                  }}
+                >
+                  {link.label}
+                </a>
+              )
             ))}
           </div>
 
           {/* CTA */}
           <div className="flex items-center gap-2">
-            <a href="https://github.com/jackyixuan/pons-mcp" target="_blank" rel="noopener noreferrer" className="hidden sm:block">
+            <Link to="/app" className="hidden sm:block">
               <button
                 className="btn-primary px-5 py-2.5 text-sm font-semibold"
                 style={{ borderRadius: '9999px' }}
               >
                 Get Started
               </button>
-            </a>
+            </Link>
 
             <button
               className="md:hidden p-2 rounded-full transition-colors"
@@ -108,7 +132,7 @@ export function Navbar() {
       {/* Mobile Menu */}
       {isMobileMenuOpen && (
         <div style={{
-          background: 'rgba(18, 8, 48, 0.95)',
+          background: 'rgba(11, 11, 11, 0.95)',
           backdropFilter: 'blur(20px)',
           borderBottom: '1px solid rgba(255,255,255,0.08)',
         }}>
@@ -117,8 +141,6 @@ export function Navbar() {
               <a
                 key={link.label}
                 href={link.href}
-                target={link.external ? '_blank' : undefined}
-                rel={link.external ? 'noopener noreferrer' : undefined}
                 className="block px-4 py-2.5 rounded-xl text-sm transition-colors"
                 style={{ color: 'rgba(255,255,255,0.65)', fontWeight: 500 }}
                 onClick={() => setIsMobileMenuOpen(false)}
@@ -126,11 +148,11 @@ export function Navbar() {
                 {link.label}
               </a>
             ))}
-            <a href="https://github.com/jackyixuan/pons-mcp" target="_blank" rel="noopener noreferrer" className="block pt-2">
+            <Link to="/app" className="block pt-2" onClick={() => setIsMobileMenuOpen(false)}>
               <button className="btn-primary w-full py-2.5 text-sm font-semibold rounded-full">
                 Get Started
               </button>
-            </a>
+            </Link>
           </div>
         </div>
       )}

@@ -3,11 +3,11 @@ import { Zap, Shield, Lock, Settings, Search, CheckCircle } from 'lucide-react';
 
 const features = [
   { icon: Zap,         title: 'MPP Integration',    description: "Native support for Stripe's Machine Payments Protocol. Agents discover services, interpret 402 responses, and authorize payments." },
-  { icon: Shield,      title: 'Base Settlement',     description: 'Sub-400ms finality with <$0.001 transaction fees. Stablecoin payments settled transparently on-chain.' },
-  { icon: Lock,        title: 'Escrow Protection',   description: 'On-chain escrow with proof of delivery verification. Funds released only after cryptographic confirmation.' },
-  { icon: Settings,    title: 'Policy Enforcement',  description: 'Configurable spending limits, merchant allowlists, and approval workflows for secure transactions.' },
-  { icon: Search,      title: 'Service Discovery',   description: 'Agents autonomously discover MPP-enabled services through directory APIs and MCP manifests.' },
-  { icon: CheckCircle, title: 'Production Ready',    description: 'Built for real-world deployments with transaction receipts, audit trails, and dispute resolution.' },
+  { icon: Shield,      title: 'On-chain Settlement', description: 'USDG transfers settle transparently on Robinhood Chain (4663). Every payment ends with a verifiable receipt.' },
+  { icon: Lock,        title: 'Policy Protection',   description: 'Per-transaction and daily caps are enforced before any funds move. Balance is checked before broadcast.' },
+  { icon: Settings,    title: 'Local Key Control',   description: 'Signing lives in the configured MCP server process — never in the browser, never in third-party code.' },
+  { icon: Search,      title: 'pons Intelligence',   description: 'Read pons v1 launch metadata, canonical pools, socials, and live markets directly from agent tool calls.' },
+  { icon: CheckCircle, title: 'Receipt Verification', description: 'A payment is complete only when the on-chain receipt confirms the exact USDG transfer to the merchant.' },
 ];
 
 const sectionHeadingStyle = {
@@ -32,14 +32,14 @@ export function Features() {
   }, []);
 
   return (
-    <section id="features" className="py-24 lg:py-32">
+    <section id="tools" className="py-24 lg:py-32">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <div className="max-w-2xl mb-16">
           <h2 className="text-3xl sm:text-4xl mb-4" style={sectionHeadingStyle}>
             Built for <span className="gradient-text">autonomous agents</span>
           </h2>
           <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '1.05rem', lineHeight: 1.65 }}>
-            Pons MCP bridges OpenClaw AI agents with Stripe's Machine Payments Protocol, enabling autonomous service payments with transparent Base settlement.
+            Pons MCP bridges AI agents with Stripe's Machine Payments Protocol, enabling autonomous service payments with transparent Robinhood Chain settlement.
           </p>
         </div>
 
@@ -54,9 +54,9 @@ export function Features() {
               <div className="card-clean p-6 h-full group">
                 <div
                   className="w-10 h-10 rounded-xl flex items-center justify-center mb-4 transition-all duration-300 group-hover:scale-110"
-                  style={{ background: 'rgba(139,92,246,0.18)', border: '1px solid rgba(139,92,246,0.3)' }}
+                  style={{ background: 'rgba(249,115,22,0.15)', border: '1px solid rgba(249,115,22,0.3)' }}
                 >
-                  <feature.icon className="w-5 h-5" style={{ color: '#c4b5fd' }} />
+                  <feature.icon className="w-5 h-5" style={{ color: '#f97316' }} />
                 </div>
                 <h3 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, color: 'white', marginBottom: '0.5rem', fontSize: '0.95rem' }}>
                   {feature.title}

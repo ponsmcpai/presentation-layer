@@ -1,0 +1,8 @@
+name = "pons-mcp"
+compatibility_date = "2026-10-01"
+pages_build_output_dir = "dist"
+
+[[d1_databases]]
+binding = "ponsmcp_payments"
+database_name = "ponsmcp-payments"
+database_id = "cbea07b9-2336-4607-8119-60b03d33b844"

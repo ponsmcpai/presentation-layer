@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
-import { ArrowRight, Copy, Check, Activity } from 'lucide-react';
-
-const CA_ADDRESS = '0xcabAc42B34C82955d4BF95cD5e81AeE0be3CCE1B';
+import { Link } from 'react-router-dom';
+import { ArrowRight, Activity, Terminal, Zap, Wallet, Shield, Cpu } from 'lucide-react';
 
 const codeSnippet = `// MPP Payment Request (HTTP 402)
 {
@@ -10,33 +9,40 @@ const codeSnippet = `// MPP Payment Request (HTTP 402)
   "payment_methods": [
     {
       "type": "crypto",
-      "blockchain": "base",
-      "token": "USDC"
+      "blockchain": "robinhood",
+      "chain_id": 4663,
+      "token": "USDG"
     }
   ]
 }
 
 // Settlement Result
 {
-  "signature": "5Kx...9mQ",
+  "hash": "0x5Kx...9mQ",
   "status": "finalized",
   "latency_ms": 380
 }`;
 
 export function Hero() {
-  const [copied, setCopied] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
+  const [ponsPrice, setPonsPrice] = useState<string | null>(null);
 
   useEffect(() => {
     const t = setTimeout(() => setIsVisible(true), 80);
     return () => clearTimeout(t);
   }, []);
 
-  const copyCA = () => {
-    navigator.clipboard.writeText(CA_ADDRESS);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+  useEffect(() => {
+    let alive = true;
+    fetch('/api/price')
+      .then((r) => r.json())
+      .then((j) => {
+        const pairs = (j.pairs ?? []).filter((p: any) => p.chainId === 'robinhood');
+        if (pairs.length > 0 && alive) setPonsPrice(pairs[0].priceUsd);
+      })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, []);
 
   return (
     <section className="relative min-h-screen flex items-center pt-16">
@@ -46,23 +52,37 @@ export function Hero() {
           {/* Left */}
           <div className={`space-y-8 transition-all duration-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
 
-            {/* CA Badge */}
-            <div
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm"
-              style={{
-                background: 'rgba(255,255,255,0.08)',
-                border: '1px solid rgba(255,255,255,0.15)',
-                backdropFilter: 'blur(10px)',
-              }}
-            >
-              <span style={{ color: 'rgba(255,255,255,0.55)', fontWeight: 500, fontSize: '0.8rem' }}>$PONS CA:</span>
-              <code style={{ color: '#c4b5fd', fontFamily: "'DM Mono', monospace", fontSize: '0.78rem' }}>{CA_ADDRESS}</code>
-              <button onClick={copyCA} className="ml-0.5 p-1 rounded-full hover:bg-white/10 transition-colors">
-                {copied
-                  ? <Check className="w-3 h-3 text-green-400" />
-                  : <Copy className="w-3 h-3" style={{ color: 'rgba(255,255,255,0.5)' }} />
-                }
-              </button>
+            {/* CA + live price badges */}
+            <div className="flex flex-wrap items-center gap-2">
+              <div
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm"
+                style={{
+                  background: 'rgba(255,255,255,0.08)',
+                  border: '1px solid rgba(255,255,255,0.15)',
+                  backdropFilter: 'blur(10px)',
+                }}
+              >
+                <span style={{ color: 'rgba(255,255,255,0.55)', fontWeight: 500, fontSize: '0.8rem' }}>$MCP CA:</span>
+                <span style={{ color: '#f97316', fontFamily: "'DM Mono', monospace", fontSize: '0.8rem', fontWeight: 600, letterSpacing: '0.02em' }}>Coming soon</span>
+              </div>
+              <div
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm"
+                style={{
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  backdropFilter: 'blur(10px)',
+                }}
+              >
+                <span className="w-2 h-2 rounded-full bg-green-400" style={{ boxShadow: '0 0 6px rgba(74,222,128,0.6)' }} />
+                {ponsPrice ? (
+                  <span style={{ color: 'rgba(255,255,255,0.75)', fontFamily: "'DM Mono', monospace", fontSize: '0.78rem', fontWeight: 600 }}>
+                    ${ponsPrice}
+                  </span>
+                ) : (
+                  <span style={{ color: 'rgba(255,255,255,0.35)', fontFamily: "'DM Mono', monospace", fontSize: '0.78rem' }}>…</span>
+                )}
+                <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.7rem' }}>PONS live</span>
+              </div>
             </div>
 
             {/* Headline - BIG like reference */}
@@ -77,25 +97,26 @@ export function Hero() {
               }}>
                 Autonomous<br />
                 payments for<br />
-                <span className="gradient-text">OpenClaw agents</span>
+                <span className="gradient-text">AI agents</span>
               </h1>
             </div>
 
             <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '1.1rem', lineHeight: 1.65, maxWidth: '480px' }}>
-              OpenClaw integration for Stripe's Machine Payments Protocol. Transparent on-chain settlement via Base.
+              MCP server + SDK for Stripe's Machine Payments Protocol. Transparent on-chain settlement on Robinhood Chain.
             </p>
 
             {/* CTAs - pill style */}
             <div className="flex flex-wrap gap-3 pt-1">
-              <a href="https://github.com/jackyixuan/pons-mcp" target="_blank" rel="noopener noreferrer">
+              <Link to="/app">
                 <button
                   className="btn-primary flex items-center gap-2 px-6 py-3 text-sm font-semibold"
                   style={{ borderRadius: '9999px' }}
                 >
+                  <Zap className="w-4 h-4" />
                   Get Started
                   <ArrowRight className="w-4 h-4" />
                 </button>
-              </a>
+              </Link>
               <a href="/status">
                 <button
                   className="btn-secondary flex items-center gap-2 px-6 py-3 text-sm font-semibold"
@@ -105,6 +126,14 @@ export function Hero() {
                 </button>
               </a>
             </div>
+
+            {/* Quick capability strip */}
+            <div className="flex flex-wrap gap-x-6 gap-y-2 pt-2" style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.8rem' }}>
+              <span className="flex items-center gap-1.5"><Terminal className="w-3.5 h-3.5" /> 9 MCP tools</span>
+              <span className="flex items-center gap-1.5"><Cpu className="w-3.5 h-3.5" /> stdio + HTTP</span>
+              <span className="flex items-center gap-1.5"><Wallet className="w-3.5 h-3.5" /> USDG settlement</span>
+              <span className="flex items-center gap-1.5"><Shield className="w-3.5 h-3.5" /> policy guard</span>
+            </div>
           </div>
 
           {/* Right - Code Block */}
@@ -112,7 +141,7 @@ export function Hero() {
             <div
               className="rounded-2xl overflow-hidden animate-float"
               style={{
-                background: 'rgba(10, 8, 30, 0.75)',
+                background: 'rgba(16, 10, 6, 0.75)',
                 border: '1px solid rgba(255,255,255,0.12)',
                 backdropFilter: 'blur(20px)',
                 boxShadow: '0 32px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06)',

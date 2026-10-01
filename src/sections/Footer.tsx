@@ -1,8 +1,8 @@
 import { Github } from 'lucide-react';
 
 const footerLinks = {
-  product:   [{ label: 'Features', href: '#features' }, { label: 'Developers', href: '#developers' }, { label: 'Team', href: '#team' }, { label: 'Status', href: '/status' }],
-  resources: [{ label: 'Documentation', href: 'https://github.com/jackyixuan/pons-mcp', external: true }, { label: 'GitHub', href: 'https://github.com/jackyixuan/pons-mcp', external: true }],
+  product:   [{ label: 'Features', href: '#features' }, { label: 'Tools', href: '#tools' }, { label: 'Token', href: '#token-benefits' }, { label: 'Status', href: '/status' }],
+  resources: [{ label: 'Documentation', href: '/docs' }, { label: 'Mission Control', href: '/app' }],
 };
 
 export function Footer() {
@@ -19,7 +19,7 @@ export function Footer() {
               Autonomous transaction infrastructure for AI agents on the Machine Payments Protocol.
             </p>
             <div className="flex gap-2">
-              {[{ href: 'https://github.com/jackyixuan/pons-mcp', icon: Github }].map(({ href, icon: Icon }) => (
+              {[{ href: 'https://github.com/ponsmcppayment/sdk', icon: Github }].map(({ href, icon: Icon }) => (
                 <a
                   key={href}
                   href={href}

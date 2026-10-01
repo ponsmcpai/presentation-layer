@@ -3,7 +3,7 @@ import { CheckCircle, AlertCircle, ArrowLeft, RefreshCw } from 'lucide-react';
 
 const generateServices = () => [
   { name: 'MPP Gateway',         description: 'Stripe Machine Payments Protocol endpoint', status: 'operational', latency: `${30 + Math.floor(Math.random() * 20)}ms` },
-  { name: 'Base RPC Node',        description: 'On-chain settlement via Base mainnet',       status: 'operational', latency: `${55 + Math.floor(Math.random() * 20)}ms` },
+  { name: 'Robinhood Chain RPC',  description: 'On-chain settlement via Robinhood Chain (4663)', status: 'operational', latency: `${55 + Math.floor(Math.random() * 20)}ms` },
   { name: 'Escrow Contract',      description: 'On-chain escrow & proof of delivery',        status: 'operational', latency: `${10 + Math.floor(Math.random() * 8)}ms`  },
   { name: 'Service Discovery',    description: 'Directory API & MCP manifest resolution',    status: 'operational', latency: `${20 + Math.floor(Math.random() * 10)}ms` },
   { name: 'Policy Engine',        description: 'Spending limits & approval workflow',         status: 'operational', latency: `${7  + Math.floor(Math.random() * 6)}ms`  },

@@ -5,9 +5,10 @@ import { Hero } from '@/sections/Hero';
 import { Features } from '@/sections/Features';
 import { Developers } from '@/sections/Developers';
 import { TokenBenefits } from '@/sections/TokenBenefits';
-import { Team } from '@/sections/Team';
 import { Footer } from '@/sections/Footer';
 import { StatusPage } from '@/sections/StatusPage';
+import { AppPage } from '@/pages/AppPage';
+import { DocsPage } from '@/pages/DocsPage';
 
 function HomePage() {
   return (
@@ -17,7 +18,6 @@ function HomePage() {
         <Features />
         <Developers />
         <TokenBenefits />
-        <Team />
       </main>
       <Footer />
     </>
@@ -32,6 +32,8 @@ function App() {
           <Navbar />
           <Routes>
             <Route path="/" element={<HomePage />} />
+            <Route path="/app" element={<AppPage />} />
+            <Route path="/docs" element={<DocsPage />} />
             <Route path="/status" element={<StatusPage />} />
           </Routes>
         </div>
