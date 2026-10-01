@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useTheme } from '@/hooks/useTheme';
 import { Menu, X } from 'lucide-react';
 
@@ -12,6 +12,8 @@ const navLinks = [
 
 export function Navbar() {
   useTheme();
+  const { pathname } = useLocation();
+  if (pathname === '/app') return null; // console owns its own chrome
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 

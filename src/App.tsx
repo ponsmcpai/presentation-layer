@@ -33,9 +33,9 @@ function App() {
           <Navbar />
           <Routes>
             <Route path="/" element={<HomePage />} />
-            <Route path="/app" element={<AppPage />} />
             <Route path="/docs" element={<DocsPage />} />
             <Route path="/status" element={<StatusPage />} />
+            <Route path="/app" element={<AppPage />} />
           </Routes>
         </div>
       </BrowserRouter>
