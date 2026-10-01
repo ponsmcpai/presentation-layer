@@ -2,7 +2,6 @@
 // Only whitelisted read methods are forwarded. No signing/broadcast methods pass through.
 // Retries on 429/5xx with short backoff; rate-limited per IP per minute.
 // @ts-nocheck — Pages runtime types are provided by Cloudflare at build time.
-const UPSTREAM = 'https://rpc.mainnet.chain.robinhood.com';
 const ALLOWED_METHODS = new Set([
   'eth_blockNumber', 'eth_chainId', 'eth_gasPrice', 'eth_getBalance',
   'eth_getTransactionReceipt', 'eth_getTransactionCount', 'eth_call',
@@ -10,6 +9,9 @@ const ALLOWED_METHODS = new Set([
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 export async function onRequestPost({ request, env }) {
+  const UPSTREAM = env.PONSMCP_ALCHEMY_KEY
+    ? `https://robinhood-mainnet.g.alchemy.com/v2/${env.PONSMCP_ALCHEMY_KEY}`
+    : 'https://rpc.nodeflare.app/robinhood/public';
   const ip = request.headers.get('cf-connecting-ip') ?? 'unknown';
   const windowStart = Math.floor(Date.now() / 60_000) * 60_000;
   const row = await env.ponsmcp_payments.prepare(

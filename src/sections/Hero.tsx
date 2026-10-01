@@ -63,7 +63,9 @@ export function Hero() {
                 }}
               >
                 <span style={{ color: 'rgba(255,255,255,0.55)', fontWeight: 500, fontSize: '0.8rem' }}>$MCP CA:</span>
+                {/* CA hidden until official announcement — restore this span + label when CA drops
                 <span style={{ color: '#f97316', fontFamily: "'DM Mono', monospace", fontSize: '0.8rem', fontWeight: 600, letterSpacing: '0.02em' }}>Coming soon</span>
+                */}
               </div>
               <div
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm"
