@@ -1,6 +1,6 @@
 # Tool reference
 
-PonsMCP currently exposes eleven MCP tools.
+PonsMCP currently exposes thirteen MCP tools.
 
 | Tool | Input | Result |
 |---|---|---|
@@ -15,6 +15,8 @@ PonsMCP currently exposes eleven MCP tools.
 | `pons_pay_resource` | `url`, optional `waitMs` | fetch a 402 resource, parse the price, settle exactly that price; requires private key |
 | `pons_v2_launch` | `token` | pons v2 factory launch record (deployer, paired token, pool fee) |
 | `pons_v2_snipe_tax` | `curve`, `recipient` | decaying opening snipe tax in bps for a specific recipient |
+| `pons_v2_quote_buy` | reserve/fee inputs | pure curve buy quote: tokens out, fee, tax, refund |
+| `pons_v2_quote_sell` | reserve/fee inputs | pure curve sell quote: gross, fee, tax, net |
 | `pons_tx_status` | `txHash` | receipt state and decoded ERC-20 transfers |
 
 ## Input validation
