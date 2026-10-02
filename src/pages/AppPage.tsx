@@ -87,9 +87,10 @@ function Step({ number, title, active, done }: { number: number; title: string; 
   );
 }
 
-function Card({ title, subtitle, children, accent }: { title: string; subtitle?: string; children: React.ReactNode; accent?: boolean }) {
+function Card({ title, subtitle, children, accent, fill, span }: { title: string; subtitle?: string; children: React.ReactNode; accent?: boolean; fill?: boolean; span?: number }) {
+  const spanClass = span ? `lg:col-span-${span} flex` : '';
   return (
-    <section className="h-full overflow-hidden rounded-2xl" style={{ background: 'rgba(16,16,16,0.62)', border: `1px solid ${accent ? 'rgba(249,115,22,0.32)' : 'rgba(255,255,255,0.1)'}` }}>
+    <section className={`h-full overflow-hidden rounded-2xl ${fill ? spanClass : ''}`} style={{ background: 'rgba(16,16,16,0.62)', border: `1px solid ${accent ? 'rgba(249,115,22,0.32)' : 'rgba(255,255,255,0.1)'}` }}>
       <div className="border-b px-5 py-4" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
         <h2 className="text-sm font-bold text-white">{title}</h2>
         {subtitle && <p className="mt-0.5 text-xs text-white/40">{subtitle}</p>}
@@ -323,7 +324,7 @@ export function AppPage() {
               </div>
 
               <div className="grid gap-5 lg:grid-cols-5">
-                <Card title="New MPP payment request" subtitle="USDG settlement · Robinhood Chain · limit 100 USDG per payment">
+                <Card title="New MPP payment request" subtitle="USDG settlement · Robinhood Chain · limit 100 USDG per payment" fill span={3}>
                   <div className="flex flex-col gap-5 p-6">
                     {services.length > 0 && (
                       <div className="flex flex-wrap gap-2">
@@ -364,8 +365,7 @@ export function AppPage() {
                   </div>
                 </Card>
 
-                <aside className="lg:col-span-2 flex">
-                  <Card title="Policy guard" subtitle="Enforced inside your PonsMCP server before broadcast">
+                <Card title="Policy guard" subtitle="Enforced inside your PonsMCP server before broadcast" fill span={2}>
                     <div className="flex flex-1 flex-col justify-between gap-4 p-5">
                       {[
                         ['Settlement asset', 'USDG (6 decimals)'],
@@ -381,8 +381,7 @@ export function AppPage() {
                       <div className="h-px bg-white/[0.08]" />
                       <div className="flex items-center gap-2 text-xs text-white/45"><ShieldCheck className="h-4 w-4 text-green-400" /> Key stays in the agent runtime — the browser never signs.</div>
                     </div>
-                  </Card>
-                </aside>
+                </Card>
               </div>
 
               {quote && (
