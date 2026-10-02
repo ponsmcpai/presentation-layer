@@ -47,6 +47,10 @@ const NAV = [
     { key: 'Chain status', icon: Activity },
     { key: 'Services', icon: Boxes },
   ] },
+  { group: 'CAPABILITIES', items: [
+    { key: 'MCP tools', icon: Boxes },
+    { key: 'Launch intel', icon: Activity },
+  ] },
   { group: 'DEVELOPER', items: [
     { key: 'Integration', icon: Network },
     { key: 'Policy', icon: Gauge },
@@ -97,6 +101,97 @@ function Card({ title, subtitle, children, accent, className = '' }: { title: st
       </div>
       {children}
     </section>
+  );
+}
+
+function LaunchIntelPanel() {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [ranking, setRanking] = useState<{
+    total: number;
+    summary: Record<string, number>;
+    launches: Array<{
+      name?: string; symbol?: string; token?: string; tier: string;
+      priceUsd?: number; marketCapUsd?: number; liquidityUsd?: number | null;
+      graduationProgressPct?: number | null; graduated?: boolean;
+      launchedAt?: string; description?: string;
+    }>;
+  } | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true); setError('');
+    try {
+      const res = await fetch('/api/launches');
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'ranking failed');
+      setRanking(data);
+    } catch (e: any) {
+      setError(e?.message ?? 'Could not load launch data');
+    } finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { void load(); }, [load]);
+
+  const tierColor = (tier: string) =>
+    tier === 'Graduated' ? { bg: 'rgba(74,222,128,0.12)', fg: '#86efac' }
+    : tier === 'Grade A' ? { bg: 'rgba(249,115,22,0.14)', fg: '#fdba74' }
+    : tier === 'Early Watch' ? { bg: 'rgba(96,165,250,0.12)', fg: '#93c5fd' }
+    : { bg: 'rgba(255,255,255,0.06)', fg: 'rgba(255,255,255,0.4)' };
+
+  return (
+    <div className="grid gap-5">
+      <Card title="Launch intelligence" subtitle="Live pons v1 launch feed, screened with the Grade A / Early Watch logic.">
+        <div className="p-5">
+          {loading && (
+            <div>
+              <div className="relative h-1.5 overflow-hidden rounded-full bg-white/10">
+                <div className="absolute inset-y-0 w-1/3 rounded-full bg-gradient-to-r from-transparent via-[#f97316] to-transparent animate-scan-sweep" />
+              </div>
+              <p className="mt-3 font-mono text-xs text-white/45">Screening launch feed...</p>
+            </div>
+          )}
+          {error && (
+            <div className="rounded-lg px-4 py-3 text-sm" style={{ color: '#fca5a5', background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)' }}>
+              {error}
+              <button onClick={() => void load()} className="ml-3 text-xs font-bold text-[#f97316] underline">Retry</button>
+            </div>
+          )}
+          {ranking && !loading && (
+            <>
+              <div className="mb-4 flex flex-wrap gap-2">
+                {Object.entries(ranking.summary).map(([tier, count]) => (
+                  <span key={tier} className="rounded-full px-3 py-1 font-mono text-[11px] font-bold" style={{ background: tierColor(tier).bg, color: tierColor(tier).fg }}>
+                    {count} {tier}
+                  </span>
+                ))}
+                <button onClick={() => void load()} className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-white/10 px-3 py-1 text-xs text-white/60 hover:text-white"><RefreshCw className="h-3 w-3" /> Refresh</button>
+              </div>
+              <div className="overflow-hidden rounded-xl border border-white/10">
+                <div className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-3 px-4 py-2 font-mono text-[10px] uppercase tracking-wide text-white/30" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(0,0,0,0.25)' }}>
+                  <span>Launch</span><span className="text-right">Price</span><span className="text-right">Grad</span><span className="text-right">Tier</span>
+                </div>
+                <div className="divide-y" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+                  {ranking.launches.map((l, i) => (
+                    <div key={l.token ?? i} className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-3 px-4 py-2.5">
+                      <div className="min-w-0">
+                        <p className="truncate text-xs font-bold text-white">{l.name ?? l.symbol ?? 'unnamed'}</p>
+                        <p className="truncate font-mono text-[9px] text-white/30">{l.token?.slice(0, 14)}...</p>
+                      </div>
+                      <span className="text-right font-mono text-[11px] text-white/70">{l.priceUsd != null ? (l.priceUsd < 0.01 ? '$' + l.priceUsd.toExponential(1) : '$' + l.priceUsd.toFixed(4)) : '-'}</span>
+                      <span className="text-right font-mono text-[11px] text-white/70">{l.graduationProgressPct != null ? Math.round(l.graduationProgressPct) + '%' : l.graduated ? '100%' : '-'}</span>
+                      <span className="rounded-full px-2 py-0.5 text-right font-mono text-[9px] font-bold" style={{ background: tierColor(l.tier).bg, color: tierColor(l.tier).fg }}>{l.tier}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <p className="mt-3 text-[10px] leading-relaxed text-white/30">
+                Screening tiers mirror the notifier logic: Grade A = liquidity over $500 with real graduation progress; Early Watch = trading but pre-graduation. Data from the official pons launch feed.
+              </p>
+            </>
+          )}
+        </div>
+      </Card>
+    </div>
   );
 }
 
@@ -331,7 +426,7 @@ export function AppPage() {
               { label: '$MCP token', value: 'Unannounced', sub: 'No market data until launch', live: false },
               { label: 'Latest block', value: live.block, sub: 'Robinhood Chain · 4663', live: true },
               { label: 'Network gas', value: live.gas, sub: 'Gas token: ETH', live: true },
-              { label: 'MCP tools', value: '17 ready', sub: 'Reads · payments · proofs', live: false },
+              { label: 'MCP tools', value: '25 tools', sub: 'Reads · payments · stocks · launches', live: false },
             ]).map(({ label, value, sub, live: isLive }) => (
               <div key={label} className="relative rounded-xl border border-white/[0.08] bg-white/[0.03] p-4">
                 {isLive && (
@@ -617,29 +712,147 @@ export function AppPage() {
 
           {/* ============ TAB: SERVICES ============ */}
           {tab === 'Services' && (
-            <Card title="Merchant service catalog" subtitle="Registry-priced services. Each unlocks its resource only after receipt verification.">
-              <div className="p-5">
-                {services.length === 0 ? (
-                  <p className="text-sm text-white/45">No public services registered yet. Merchants register through the registry API with an onboarding secret; resources then answer 402 until paid.</p>
-                ) : (
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    {services.map((service) => (
-                      <div key={service.id} className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-                        <div className="flex items-center justify-between gap-2">
-                          <h3 className="text-sm font-bold text-white">{service.name}</h3>
-                          <span className="font-mono text-xs text-[#fdba74]">{Number(service.price_usdg).toFixed(2)} USDG</span>
+            <div className="grid gap-5">
+              <Card title="Paid services" subtitle="Real deliverables, priced in USDG. Each unlocks its payload only after your agent's payment verifies on-chain.">
+                <div className="grid gap-4 p-5 sm:grid-cols-2">
+                  {services.map((service) => {
+                    const meta: Record<string, { desc: string; features: string[]; icon: string }> = {
+                      svc_sdkguide01: {
+                        desc: 'Drop-in TypeScript quickstart for wiring an agent to PonsMCP: install, key handling, policy caps, first settlement — copy-paste ready.',
+                        features: ['Install & config commands', 'Working pay() example', 'Policy defaults explained'],
+                        icon: '⌨',
+                      },
+                      svc_launchintel01: {
+                        desc: 'Live on-chain snapshot of the pons v2 launch factory computed at unlock time: config count, latest block, factory address. Fresh on every request.',
+                        features: ['Real chain read at unlock', 'Factory config count', 'Block-height proof'],
+                        icon: '◎',
+                      },
+                    };
+                    const m = meta[service.id] ?? { desc: 'Unlocks after on-chain receipt verification.', features: [], icon: '◇' };
+                    return (
+                      <div key={service.id} className="flex flex-col rounded-2xl border border-[#f97316]/25 bg-gradient-to-b from-[#f97316]/[0.06] to-transparent p-5">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex h-11 w-11 items-center justify-center rounded-xl text-xl text-[#fdba74]" style={{ background: 'rgba(249,115,22,0.12)', border: '1px solid rgba(249,115,22,0.3)' }}>{m.icon}</div>
+                          <div className="text-right">
+                            <p className="text-lg font-extrabold text-white" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>{Number(service.price_usdg).toFixed(2)}</p>
+                            <p className="font-mono text-[10px] text-white/35">USDG · one-time</p>
+                          </div>
                         </div>
-                        <p className="mt-1 font-mono text-[10px] text-white/35">{service.merchant.slice(0, 10)}…{service.merchant.slice(-6)} · {service.resource_path}</p>
+                        <h3 className="mt-3 text-sm font-bold text-white">{service.name}</h3>
+                        <p className="mt-1.5 text-xs leading-relaxed text-white/50">{m.desc}</p>
+                        {m.features.length > 0 && (
+                          <ul className="mt-3 space-y-1">
+                            {m.features.map((f) => (
+                              <li key={f} className="flex items-center gap-2 text-[11px] text-white/45"><Check className="h-3 w-3 text-green-400" /> {f}</li>
+                            ))}
+                          </ul>
+                        )}
                         <button onClick={() => { setMerchant(service.merchant); setAmount(Number(service.price_usdg).toFixed(2)); setTab('New payment'); setQuote(null); }}
-                          className="btn-primary mt-3 inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold">
-                          Pay this service <ArrowRight className="h-3 w-3" />
+                          className="btn-primary mt-4 inline-flex w-full items-center justify-center gap-1.5 rounded-lg py-2.5 text-xs font-bold">
+                          Buy with agent payment <ArrowRight className="h-3 w-3" />
                         </button>
+                        <p className="mt-2 text-center font-mono text-[9px] text-white/25">{service.id}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+                {services.length === 0 && (
+                  <p className="p-5 text-sm text-white/45">No public services registered yet.</p>
+                )}
+              </Card>
+              <Card title="How it works" subtitle="The merchant pattern behind every listing.">
+                <div className="grid gap-3 p-5 sm:grid-cols-3">
+                  {[
+                    ['1', 'Agent picks a service', 'The agent reads this catalog and picks what it needs — no human in the loop.'],
+                    ['2', '402 quote returned', 'The resource answers PAYMENT-REQUIRED with exact price and recipient.'],
+                    ['3', 'Pay → unlock', 'pons_pay settles USDG on-chain; the receipt unlocks the payload instantly.'],
+                  ].map(([n, title, text]) => (
+                    <div key={n} className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                      <span className="font-mono text-xs text-[#f97316]">0{n}</span>
+                      <h3 className="mt-1 text-sm font-bold text-white">{title}</h3>
+                      <p className="mt-1 text-xs leading-relaxed text-white/50">{text}</p>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            </div>
+          )}
+
+          {/* ============ TAB: MCP TOOLS ============ */}
+          {tab === 'MCP tools' && (() => {
+            const toolGroups: Array<{ group: string; note: string; tools: Array<[string, string, boolean]> }> = [
+              { group: 'PAYMENT', note: 'Settlement in USDG with policy enforcement', tools: [
+                ['pons_quote', 'Convert USD → USDG base units, nothing executed', false],
+                ['pons_pay', 'Policy check → transfer → verified receipt', true],
+                ['pons_pay_resource', 'Parse a 402 resource and settle its exact price', true],
+                ['pons_tx_status', 'Receipt lookup with decoded transfers', false],
+                ['pons_balance', 'Agent wallet balance for any token', true],
+              ]},
+              { group: 'STOCKS', note: '19 tokenized securities on Robinhood Chain', tools: [
+                ['pons_stocks_list', 'All 19 verified stock tokens with addresses', false],
+                ['pons_stock_price', 'Live DEX price by ticker (NVDA, AAPL…)', false],
+                ['pons_stock_info', 'On-chain name, symbol, supply', false],
+                ['pons_stocks_screen', 'Screen all 19, rank by liquidity, Grade A filter', false],
+              ]},
+              { group: 'LAUNCH INTELLIGENCE', note: 'Pons v1 + v2 launchpad research', tools: [
+                ['pons_launch_feed', 'Recent launches from the official feed', false],
+                ['pons_launch_ranking', 'Tier ranking: Graduated / Grade A / Early Watch', false],
+                ['pons_graduated_launches', 'Launches that hit graduation', false],
+                ['pons_launch_info', 'V1 token on-chain metadata', false],
+                ['pons_launch_market', 'Live markets for a launch token', false],
+                ['pons_v2_launch', 'V2 factory launch record', false],
+                ['pons_v2_snipe_tax', 'Decaying opening tax per recipient', false],
+                ['pons_v2_quote_buy', 'Pure curve buy quote', false],
+                ['pons_v2_quote_sell', 'Pure curve sell quote', false],
+                ['pons_escrow_balance', 'Claimable ETH on the v2 fee escrow', false],
+                ['pons_escrow_token_balance', 'Claimable ERC-20 fees', false],
+              ]},
+              { group: 'CHAIN & TRANSFER', note: 'Low-level reads and token movement', tools: [
+                ['pons_chain_info', 'Chain ID, block, gas, canonical addresses', false],
+                ['pons_token_info', 'ERC-20 metadata for any token', false],
+                ['pons_send_token', 'Send any ERC-20 by ticker or address', true],
+                ['pons_send_eth', 'Send native ETH', true],
+              ]},
+            ];
+            return (
+              <div className="grid gap-5">
+                <Card title="MCP tool surface" subtitle={`25 tools · ${toolGroups.length} categories · zero runtime dependencies`}>
+                  <div className="grid gap-5 p-5">
+                    {toolGroups.map((g) => (
+                      <div key={g.group}>
+                        <div className="mb-2 flex items-baseline justify-between">
+                          <h3 className="text-xs font-bold uppercase tracking-[0.14em] text-[#fdba74]">{g.group}</h3>
+                          <span className="font-mono text-[10px] text-white/30">{g.note}</span>
+                        </div>
+                        <div className="overflow-hidden rounded-xl border border-white/10">
+                          {g.tools.map(([name, desc, needsKey], i) => (
+                            <div key={name} className={`flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5 ${i % 2 ? 'bg-white/[0.02]' : ''}`} style={{ borderTop: i ? '1px solid rgba(255,255,255,0.05)' : 'none' }}>
+                              {needsKey && <span className="rounded px-1.5 py-0.5 font-mono text-[9px] font-bold" style={{ background: 'rgba(74,222,128,0.14)', color: '#86efac' }}>KEY</span>}
+                              <span className="font-mono text-xs font-semibold text-[#fed7aa]">{name}</span>
+                              <span className="min-w-0 flex-1 truncate text-[11px] text-white/40">{desc}</span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     ))}
                   </div>
-                )}
+                </Card>
+                <Card title="Connect any MCP client" subtitle="Stdio transport — Claude Desktop, Cursor, or any MCP host.">
+                  <div className="p-5">
+                    <div className="relative rounded-xl p-4" style={{ background: 'rgba(0,0,0,0.38)', border: '1px solid rgba(255,255,255,0.09)' }}>
+                      <div className="absolute right-2 top-2"><CopyButton value={'npm install -g @ponsmcp/sdk\nponsmcp  # stdio MCP server'} /></div>
+                      <pre className="overflow-x-auto pr-8 font-mono text-xs" style={{ color: '#f97316' }}>{'npm install -g @ponsmcp/sdk\nponsmcp  # stdio MCP server'}</pre>
+                    </div>
+                    <p className="mt-3 text-xs leading-relaxed text-white/45">Wallet tools (marked KEY) activate when PONSMCP_PRIVATE_KEY is present in the server environment. Everything else works keyless.</p>
+                  </div>
+                </Card>
               </div>
-            </Card>
+            );
+          })()}
+
+          {/* ============ TAB: LAUNCH INTEL ============ */}
+          {tab === 'Launch intel' && (
+            <LaunchIntelPanel />
           )}
 
           {/* ============ TAB: INTEGRATION ============ */}
@@ -691,8 +904,8 @@ export function AppPage() {
               <div className="flex flex-col gap-4 p-5">
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="rounded-xl p-4" style={{ background: 'rgba(255,255,255,0.04)' }}>
-                    <p className="text-xs text-white/40">RPC endpoint (agent → chain)</p>
-                    <p className="mt-1 font-mono text-xs break-all text-white/80">https://rpc.mainnet.chain.robinhood.com</p>
+                    <p className="text-xs text-white/40">RPC failover chain (agent → chain)</p>
+                    <p className="mt-1 font-mono text-xs break-all text-white/80">Alchemy (primary) → nodeflare → routeme — 12s hard budget</p>
                   </div>
                   <div className="rounded-xl p-4" style={{ background: 'rgba(255,255,255,0.04)' }}>
                     <p className="text-xs text-white/40">Settlement console API (this origin)</p>

@@ -53,7 +53,7 @@ export function Hero() {
             <div className="flex flex-wrap items-center gap-2">
               <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-sm" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(249,115,22,0.3)', backdropFilter: 'blur(10px)' }}>
                 <span style={{ color: 'rgba(255,255,255,0.45)', fontWeight: 500, fontSize: '0.78rem' }}>$MCP CA:</span>
-                <span style={{ color: '#f97316', fontFamily: "'DM Mono', monospace", fontSize: '0.78rem', fontWeight: 600 }}>{MCP_CA.slice(0, 6)}…{MCP_CA.slice(-4)}</span>
+                <span style={{ color: '#f97316', fontFamily: "'DM Mono', monospace", fontSize: '0.78rem', fontWeight: 600 }}>{MCP_CA}</span>
                 <button onClick={handleCopy} className="ml-1 flex items-center" style={{ color: copied ? '#d8ff4f' : 'rgba(255,255,255,0.4)' }}>
                   {copied ? <CheckCheck className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                 </button>
