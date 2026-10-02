@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Activity, Terminal, Zap, Wallet, Shield, Cpu } from 'lucide-react';
+import { ArrowRight, Activity, Terminal, Zap, Wallet, Shield, Cpu, Copy, CheckCheck } from 'lucide-react';
+
+const MCP_CA = '0x15da2596F4C21227185466066Bf0f19d9D526B8a';
 
 const codeSnippet = `// MPP Payment Request (HTTP 402)
 {
@@ -25,6 +27,14 @@ const codeSnippet = `// MPP Payment Request (HTTP 402)
 
 export function Hero() {
   const [isVisible, setIsVisible] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(MCP_CA).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
 
   useEffect(() => {
     const t = setTimeout(() => setIsVisible(true), 80);
@@ -39,14 +49,16 @@ export function Hero() {
           {/* Left */}
           <div className={`space-y-8 transition-all duration-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
 
-            {/* CA badge — restore when $MCP contract is announced
+            {/* CA badge */}
             <div className="flex flex-wrap items-center gap-2">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm" style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', backdropFilter: 'blur(10px)' }}>
-                <span style={{ color: 'rgba(255,255,255,0.55)', fontWeight: 500, fontSize: '0.8rem' }}>$MCP CA:</span>
-                <span style={{ color: '#f97316', fontFamily: "'DM Mono', monospace", fontSize: '0.8rem', fontWeight: 600 }}>0x…</span>
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-sm" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(249,115,22,0.3)', backdropFilter: 'blur(10px)' }}>
+                <span style={{ color: 'rgba(255,255,255,0.45)', fontWeight: 500, fontSize: '0.78rem' }}>$MCP CA:</span>
+                <span style={{ color: '#f97316', fontFamily: "'DM Mono', monospace", fontSize: '0.78rem', fontWeight: 600 }}>{MCP_CA.slice(0, 6)}…{MCP_CA.slice(-4)}</span>
+                <button onClick={handleCopy} className="ml-1 flex items-center" style={{ color: copied ? '#d8ff4f' : 'rgba(255,255,255,0.4)' }}>
+                  {copied ? <CheckCheck className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                </button>
               </div>
             </div>
-            */}
 
             {/* Eyebrow badge */}
             <div className="pb-5">
