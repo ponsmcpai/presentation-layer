@@ -275,7 +275,7 @@ export function AppPage() {
           <span className="text-sm font-bold tracking-[-0.03em] text-white">Mission Control</span>
         </div>
 
-        <div className="mx-auto max-w-[1200px] px-4 pb-24 pt-6 sm:px-6 lg:px-10">
+        <div className="w-full px-5 pb-24 pt-6 sm:px-8 lg:px-12">
           {/* Header */}
           <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
             <div>
