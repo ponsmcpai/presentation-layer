@@ -48,6 +48,14 @@ export function Hero() {
             </div>
             */}
 
+            {/* Eyebrow badge */}
+            <div className="pb-5">
+              <span className="inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-xs font-medium" style={{ background: 'rgba(249,115,22,0.1)', border: '1px solid rgba(249,115,22,0.3)', color: '#fdba74' }}>
+                <span className="h-1.5 w-1.5 rounded-full bg-[#f97316]" />
+                Open source · MIT · npm install -g @ponsmcp/sdk
+              </span>
+            </div>
+
             {/* Headline - BIG like reference */}
             <div className="space-y-2">
               <h1 style={{

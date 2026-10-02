@@ -89,7 +89,7 @@ function Step({ number, title, active, done }: { number: number; title: string; 
 
 function Card({ title, subtitle, children, accent }: { title: string; subtitle?: string; children: React.ReactNode; accent?: boolean }) {
   return (
-    <section className="overflow-hidden rounded-2xl" style={{ background: 'rgba(16,16,16,0.62)', border: `1px solid ${accent ? 'rgba(249,115,22,0.32)' : 'rgba(255,255,255,0.1)'}` }}>
+    <section className="h-full overflow-hidden rounded-2xl" style={{ background: 'rgba(16,16,16,0.62)', border: `1px solid ${accent ? 'rgba(249,115,22,0.32)' : 'rgba(255,255,255,0.1)'}` }}>
       <div className="border-b px-5 py-4" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
         <h2 className="text-sm font-bold text-white">{title}</h2>
         {subtitle && <p className="mt-0.5 text-xs text-white/40">{subtitle}</p>}
@@ -214,7 +214,7 @@ export function AppPage() {
   const pendingCount = history.filter((i) => i.status === 'pending').length;
 
   const sidebar = (
-    <aside className="flex w-[248px] shrink-0 flex-col border-r border-white/[0.07] bg-[#0c0b09]">
+    <aside className="flex h-full w-[248px] shrink-0 flex-col border-r border-white/[0.07] bg-[#0c0b09]">
       <div className="px-4 pb-3 pt-5">
         <Link to="/" className="group flex items-center gap-2.5">
           <img src="/logo.png" alt="" className="size-[32px] rounded-lg object-cover" />
@@ -275,7 +275,7 @@ export function AppPage() {
           <span className="text-sm font-bold tracking-[-0.03em] text-white">Mission Control</span>
         </div>
 
-        <div className="mx-auto max-w-6xl px-4 pb-24 pt-6 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-[1200px] px-4 pb-24 pt-6 sm:px-6 lg:px-10">
           {/* Header */}
           <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
             <div>
