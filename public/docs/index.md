@@ -39,4 +39,4 @@ docs/
 - The MCP server runs locally over stdio today (npm: `@ponsmcp/sdk`).
 - The agent wallet private key never belongs in the browser UI.
 - Payments settle in USDG; PONS/pons market reads are separate tools.
-- `$MCP` contract address, distribution, market links, and utility are **not announced**. Do not infer them from a ticker name.
+- `$MCP` is live: contract `0x15da2596F4C21227185466066Bf0f19d9D526B8a` on Robinhood Chain (4663). Verify name/symbol/supply on-chain yourself before trusting any ticker — this doc links the canonical address, not a name.

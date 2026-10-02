@@ -203,6 +203,7 @@ export function AppPage() {
   const [quote, setQuote] = useState<Quote | null>(null);
   const [error, setError] = useState('');
   const [live, setLive] = useState<Live>({ block: '—', gas: '—' });
+  const [mcpPrice, setMcpPrice] = useState<{ priceUsd: string; change24h: number | null } | null>(null);
   const [txHash, setTxHash] = useState('');
   const [receiptBusy, setReceiptBusy] = useState(false);
   const [receipt, setReceipt] = useState<{ status: 'success' | 'reverted'; block: string; gas: string; hash: string } | null>(null);
@@ -236,6 +237,22 @@ export function AppPage() {
     const id = setInterval(() => { void refreshLive(); }, 12000);
     return () => clearInterval(id);
   }, [refreshLive]);
+
+  const MCP_CA = '0x15da2596F4C21227185466066Bf0f19d9D526B8a';
+  const refreshMcpPrice = useCallback(async () => {
+    try {
+      const res = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${MCP_CA}`);
+      const data = await res.json();
+      const pair = (data.pairs ?? []).filter((p: any) => p.chainId === 'robinhood').sort((a: any, b: any) => (b.liquidity?.usd ?? 0) - (a.liquidity?.usd ?? 0))[0];
+      if (pair) {
+        setMcpPrice({
+          priceUsd: Number(pair.priceUsd).toLocaleString('en-US', { minimumSignificantDigits: 3, maximumSignificantDigits: 3 }),
+          change24h: pair.priceChange?.h24 ?? null,
+        });
+      }
+    } catch { /* keep last known value; never show a fake price */ }
+  }, []);
+  useEffect(() => { void refreshMcpPrice(); const id = setInterval(() => void refreshMcpPrice(), 30000); return () => clearInterval(id); }, [refreshMcpPrice]);
 
   const refreshHistory = useCallback(async () => {
     try {
@@ -423,22 +440,38 @@ export function AppPage() {
           {/* Stat strip */}
           <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
             {([
-              { label: '$MCP token', value: 'Unannounced', sub: 'No market data until launch', live: false },
+              {
+                label: '$MCP token',
+                value: mcpPrice ? `$${mcpPrice.priceUsd}` : 'Loading…',
+                sub: mcpPrice?.change24h != null ? `MCP · 24h ${mcpPrice.change24h >= 0 ? '+' : ''}${mcpPrice.change24h.toFixed(1)}%` : 'MCP · live on Uniswap V4 (RH)',
+                live: true,
+                href: 'https://dexscreener.com/robinhood/0x50a505074173d50d7d21d45e19d3a94202dfce860273100d1c19008051e9475f',
+                changeColor: mcpPrice?.change24h != null ? (mcpPrice.change24h >= 0 ? '#86efac' : '#fca5a5') : undefined,
+              },
               { label: 'Latest block', value: live.block, sub: 'Robinhood Chain · 4663', live: true },
               { label: 'Network gas', value: live.gas, sub: 'Gas token: ETH', live: true },
               { label: 'MCP tools', value: '25 tools', sub: 'Reads · payments · stocks · launches', live: false },
-            ]).map(({ label, value, sub, live: isLive }) => (
-              <div key={label} className="relative rounded-xl border border-white/[0.08] bg-white/[0.03] p-4">
-                {isLive && (
-                  <span className="absolute right-3 top-3 flex items-center gap-1">
-                    <span className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse-dot" />
-                  </span>
-                )}
-                <p className="text-[11px] text-white/40">{label}</p>
-                <p className={`mt-1 truncate text-base font-bold text-white ${isLive && liveTick ? 'animate-count-flicker' : ''}`} style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>{value}</p>
-                <p className="mt-0.5 truncate font-mono text-[10px] text-white/30">{sub}</p>
-              </div>
-            ))}
+            ]).map(({ label, value, sub, live: isLive, href, changeColor }) => {
+              const content = (
+                <>
+                  <p className="text-[11px] text-white/40">{label}</p>
+                  <p className={`mt-1 truncate text-base font-bold ${isLive && liveTick ? 'animate-count-flicker' : ''}`} style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", color: changeColor ?? 'white' }}>{value}</p>
+                  <p className="mt-0.5 truncate font-mono text-[10px] text-white/30">{sub}</p>
+                </>
+              );
+              const cls = `relative rounded-xl border border-white/[0.08] bg-white/[0.03] p-4 ${href ? 'transition hover:border-[#f97316]/40 hover:bg-white/[0.05]' : ''}`;
+              return href ? (
+                <a key={label} href={href} target="_blank" rel="noopener noreferrer" className={cls}>
+                  {isLive && <span className="absolute right-3 top-3 flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse-dot" /></span>}
+                  {content}
+                </a>
+              ) : (
+                <div key={label} className={cls}>
+                  {isLive && <span className="absolute right-3 top-3 flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse-dot" /></span>}
+                  {content}
+                </div>
+              );
+            })}
           </div>
 
           {/* ============ TAB: NEW PAYMENT ============ */}

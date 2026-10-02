@@ -90,7 +90,7 @@ export function DocsPage() {
               ))}
             </nav>
             <div className="mt-5 rounded-xl border border-white/10 bg-white/[0.03] p-3 text-xs leading-5 text-white/50">
-              Settlement runs in USDG on Robinhood Chain 4663. $MCP contract details are announced only at official launch.
+              Settlement runs in USDG on Robinhood Chain 4663. $MCP is live at 0x15da2596F4C21227185466066Bf0f19d9D526B8a.
             </div>
           </div>
         </aside>
@@ -131,7 +131,7 @@ export function DocsPage() {
                 ['What makes a payment "done"?', 'A successful on-chain receipt with the exact USDG transfer — not a UI confirmation. pons_pay verifies status 0x1 plus token, recipient, and amount before returning.'],
                 ['Which chain and asset?', 'Robinhood Chain, chain ID 4663 (Arbitrum Orbit L2). Settlement runs in USDG, a 6-decimal stablecoin. Gas is paid in ETH.'],
                 ['What does it cost?', 'The SDK is free and open source. You pay only network gas (fractions of a cent) and whatever a merchant charges for their service.'],
-                ['Is the $MCP token live?', 'Not yet. The contract address is unannounced — any token claiming to be $MCP before the official announcement is fake.'],
+                ['Is the $MCP token live?', 'Yes. Contract: 0x15da2596F4C21227185466066Bf0f19d9D526B8a on Robinhood Chain (4663). Verify it yourself — token name/symbol, totalSupply, and the Uniswap V4 pair are all readable on-chain before you trust any ticker.'],
               ].map(([title, text]) => (
                 <div key={title} className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
                   <h3 className="font-semibold text-white">{title}</h3>
@@ -285,7 +285,7 @@ ponsmcp
                   ['Key boundary', 'Private keys live only in the configured MCP server process. The web console creates and inspects intents — it never signs.'],
                   ['Policy boundary', 'Configurable per-tx and daily caps are checked before broadcast. Lower blast radius for autonomous agents.'],
                   ['Proof boundary', 'A hash alone is not proof. Receipts must carry the exact USDG transfer, and merchants must prevent hash reuse across intents.'],
-                  ['Identity boundary', 'Token names and symbols are not identity. Always verify the contract address; $MCP details ship only at official launch.'],
+                  ['Identity boundary', 'Token names and symbols are not identity. $MCP is live at 0x15da2596F4C21227185466066Bf0f19d9D526B8a — always verify the contract address yourself rather than trusting a ticker.'],
                 ].map(([title, text]) => (
                   <div key={title} className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
                     <h3 className="text-sm font-bold text-white">{title}</h3>

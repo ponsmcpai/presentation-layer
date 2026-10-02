@@ -1,6 +1,6 @@
 # pons launch intelligence
 
-PonsMCP separates **PONS** the existing reference token from **pons** the launch protocol, and from **$MCP**, which is not announced yet.
+PonsMCP separates **PONS** the existing reference token from **pons** the launch protocol, and from **$MCP** (`0x15da2596F4C21227185466066Bf0f19d9D526B8a` on Robinhood Chain 4663) — PonsMCP's own ecosystem token, now live.
 
 ## `pons_launch_info`
 

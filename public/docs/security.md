@@ -22,4 +22,4 @@ Addresses and transaction hashes are format checked. Read failures are returned 
 - Start with low policy limits and a wallet holding only the capital an autonomous agent may actually spend.
 - Treat copied token names and symbols as untrusted; validate the contract address.
 - Verify the active chain is Robinhood Chain (`4663`) before interpreting a receipt.
-- `$MCP` has no announced contract address in this release. Any address promoted as `$MCP` before the official announcement is not verified by this documentation.
+- `$MCP` is live with a published contract address (see docs home). Any address NOT matching `0x15da2596F4C21227185466066Bf0f19d9D526B8a` on Robinhood Chain is not $MCP.
