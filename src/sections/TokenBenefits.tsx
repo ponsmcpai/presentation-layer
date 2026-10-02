@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { 
   Percent, 
@@ -6,20 +6,23 @@ import {
   Vote, 
   Coins, 
   Star, 
-  Droplets,
+  Copy,
+  CheckCheck,
   ExternalLink
 } from 'lucide-react';
+
+const CA = '0x15da2596F4C21227185466066Bf0f19d9D526B8a';
 
 const benefits = [
   {
     icon: Percent,
-    title: 'Announced at launch',
-    description: 'Any fee-related utility for the $MCP token will be published with the official token announcement.',
+    title: 'Fee utility',
+    description: 'Fee-related utility for the $MCP token is tied to the PonsMCP agent-payment rail operations.',
   },
   {
     icon: Wallet,
-    title: 'Verified contract first',
-    description: 'The contract address, distribution, and liquidity plan ship together — never as rumors.',
+    title: 'Verified contract',
+    description: 'Contract address is live and verifiable on-chain. Distribution and liquidity details are published with the launch.',
   },
   {
     icon: Vote,
@@ -29,22 +32,30 @@ const benefits = [
   {
     icon: Coins,
     title: 'Agent-payment aligned',
-    description: '$MCP is the ecosystem asset of the PonsMCP agent-payment rail; details follow the launch plan.',
+    description: '$MCP is the ecosystem asset of the PonsMCP agent-payment rail on Robinhood Chain.',
   },
   {
     icon: Star,
-    title: 'No fake numbers',
-    description: 'No invented APY, supply, or market-cap claims before the token exists on-chain.',
+    title: 'On-chain verified',
+    description: 'All supply, distribution, and liquidity data are readable directly from the contract.',
   },
   {
-    icon: Droplets,
+    icon: ExternalLink,
     title: 'Official channels only',
-    description: 'Trust token information only from this site and the official announcement once published.',
+    description: 'Trust token information only from this site and the verified contract address above.',
   },
 ];
 
 export function TokenBenefits() {
   const cardsRef = useRef<(HTMLDivElement | null)[]>([]);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(CA).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -75,8 +86,24 @@ export function TokenBenefits() {
             Token <span className="gradient-text">Benefits</span>
           </h2>
           <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '1.05rem', lineHeight: 1.65 }}>
-            $MCP is the upcoming ecosystem asset of the PonsMCP agent-payment rail. The contract address and launch details are not announced yet — this page will carry only verified information.
+            $MCP is the ecosystem asset of the PonsMCP agent-payment rail on Robinhood Chain.
           </p>
+        </div>
+
+        {/* CA Box */}
+        <div className="mb-10 flex flex-col sm:flex-row items-start sm:items-center gap-3 border border-white/15 bg-white/[.035] rounded-xl p-4 sm:p-5">
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-mono uppercase tracking-widest text-[#d8ff4f] mb-1">Contract Address</p>
+            <p className="font-mono text-sm text-white/80 break-all">{CA}</p>
+          </div>
+          <button
+            onClick={handleCopy}
+            className="flex items-center gap-2 shrink-0 rounded-lg px-4 py-2 text-sm font-semibold transition-all duration-200"
+            style={{ background: 'rgba(255,255,255,0.07)', color: copied ? '#d8ff4f' : 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.12)' }}
+          >
+            {copied ? <CheckCheck className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+            {copied ? 'Copied' : 'Copy'}
+          </button>
         </div>
 
         {/* Grid */}
@@ -105,7 +132,7 @@ export function TokenBenefits() {
         <div className="text-center">
           <a href="#developers">
             <Button className="rounded-lg btn-primary gap-2">
-              Follow the launch plan
+              Enter mission control
               <ExternalLink className="w-4 h-4" />
             </Button>
           </a>
