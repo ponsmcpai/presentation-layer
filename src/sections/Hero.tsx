@@ -25,23 +25,10 @@ const codeSnippet = `// MPP Payment Request (HTTP 402)
 
 export function Hero() {
   const [isVisible, setIsVisible] = useState(false);
-  const [ponsPrice, setPonsPrice] = useState<string | null>(null);
 
   useEffect(() => {
     const t = setTimeout(() => setIsVisible(true), 80);
     return () => clearTimeout(t);
-  }, []);
-
-  useEffect(() => {
-    let alive = true;
-    fetch('/api/price')
-      .then((r) => r.json())
-      .then((j) => {
-        const pairs = (j.pairs ?? []).filter((p: any) => p.chainId === 'robinhood');
-        if (pairs.length > 0 && alive) setPonsPrice(pairs[0].priceUsd);
-      })
-      .catch(() => {});
-    return () => { alive = false; };
   }, []);
 
   return (
@@ -66,24 +53,6 @@ export function Hero() {
                 {/* CA hidden until official announcement — restore this span + label when CA drops
                 <span style={{ color: '#f97316', fontFamily: "'DM Mono', monospace", fontSize: '0.8rem', fontWeight: 600, letterSpacing: '0.02em' }}>Coming soon</span>
                 */}
-              </div>
-              <div
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm"
-                style={{
-                  background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  backdropFilter: 'blur(10px)',
-                }}
-              >
-                <span className="w-2 h-2 rounded-full bg-green-400" style={{ boxShadow: '0 0 6px rgba(74,222,128,0.6)' }} />
-                {ponsPrice ? (
-                  <span style={{ color: 'rgba(255,255,255,0.75)', fontFamily: "'DM Mono', monospace", fontSize: '0.78rem', fontWeight: 600 }}>
-                    ${ponsPrice}
-                  </span>
-                ) : (
-                  <span style={{ color: 'rgba(255,255,255,0.35)', fontFamily: "'DM Mono', monospace", fontSize: '0.78rem' }}>…</span>
-                )}
-                <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.7rem' }}>PONS live</span>
               </div>
             </div>
 

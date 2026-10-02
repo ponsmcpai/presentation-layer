@@ -12,7 +12,7 @@ export function Footer() {
         <div className="grid md:grid-cols-4 gap-8 mb-12">
           <div className="md:col-span-2">
             <a href="/" className="flex items-center gap-2.5 mb-4">
-              <div className="w-8 h-8"><img src="/logo.png" alt="Pons MCP" className="w-full h-full object-contain" /></div>
+              <div className="w-8 h-8"><img src="/logo.png" alt="Pons MCP" className="w-full h-full object-cover rounded-lg" /></div>
               <span style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, fontSize: '1rem', color: 'white' }}>Pons MCP</span>
             </a>
             <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.875rem', lineHeight: 1.7, maxWidth: '340px', marginBottom: '1.25rem' }}>

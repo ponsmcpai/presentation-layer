@@ -217,7 +217,7 @@ export function AppPage() {
     <aside className="flex w-[248px] shrink-0 flex-col border-r border-white/[0.07] bg-[#0c0b09]">
       <div className="px-4 pb-3 pt-5">
         <Link to="/" className="group flex items-center gap-2.5">
-          <img src="/logo.png" alt="" className="size-[32px] rounded-lg border border-white/10 object-contain" />
+          <img src="/logo.png" alt="" className="size-[32px] rounded-lg object-cover" />
           <span className="flex flex-col">
             <span className="text-[13px] font-semibold tracking-[0.2em] text-white">PONSMCP</span>
             <span className="text-[9.5px] tracking-[0.14em] text-white/30">MISSION CONTROL</span>
