@@ -227,7 +227,7 @@ export function AppPage() {
       <nav className="flex-1 overflow-y-auto px-2 pb-4">
         {NAV.map((group) => (
           <div key={group.group} className="mb-3">
-            <div className="px-2 pb-1.5 text-[10px] font-semibold tracking-[0.18em] text-white/30">{group.group}</div>
+            <div className="px-2 pb-1.5 text-[10.5px] font-semibold tracking-[0.18em] text-white/40">{group.group}</div>
             <div className="flex flex-col gap-0.5">
               {group.items.map((item) => {
                 const selected = tab === item.key;
@@ -246,9 +246,9 @@ export function AppPage() {
           </div>
         ))}
       </nav>
-      <div className="border-t border-white/[0.06] px-4 py-3">
-        <div className="text-[9px] uppercase tracking-[0.14em] text-white/25">Settlement</div>
-        <a href={`${RH_EXPLORER}/token/${USDG}`} target="_blank" rel="noopener noreferrer" className="mt-1 flex items-center gap-1 font-mono text-[10px] text-[#f97316]">USDG {USDG.slice(0, 8)}… <ExternalLink className="h-3 w-3" /></a>
+      <div className="border-t border-white/[0.06] px-4 py-3.5">
+        <div className="text-[9.5px] uppercase tracking-[0.14em] text-white/35">Settlement</div>
+        <a href={`${RH_EXPLORER}/token/${USDG}`} target="_blank" rel="noopener noreferrer" className="mt-1 flex items-center gap-1 font-mono text-[11px] text-[#f97316]">USDG {USDG.slice(0, 8)}… <ExternalLink className="h-3 w-3" /></a>
       </div>
     </aside>
   );
@@ -300,7 +300,7 @@ export function AppPage() {
               ['$MCP token', 'Unannounced', 'No market data until launch'],
               ['Latest block', live.block, 'Robinhood Chain · 4663'],
               ['Network gas', live.gas, 'Gas token: ETH'],
-              ['MCP tools', '11 ready', 'Reads · 402 pay · policy · proof'],
+              ['MCP tools', '14 ready', 'Reads · payments · proofs'],
             ].map(([label, value, sub]) => (
               <div key={label} className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-4">
                 <p className="text-[11px] text-white/40">{label}</p>
@@ -323,7 +323,7 @@ export function AppPage() {
               </div>
 
               <div className="grid gap-5 lg:grid-cols-5">
-                <Card title="New MPP payment request" subtitle="USDG settlement · Robinhood Chain · per-payment limit 100 USDG">
+                <Card title="New MPP payment request" subtitle="USDG settlement · Robinhood Chain · limit 100 USDG per payment">
                   <div className="flex flex-col gap-5 p-6">
                     {services.length > 0 && (
                       <div className="flex flex-wrap gap-2">
@@ -364,9 +364,9 @@ export function AppPage() {
                   </div>
                 </Card>
 
-                <aside className="lg:col-span-2">
+                <aside className="lg:col-span-2 flex">
                   <Card title="Policy guard" subtitle="Enforced inside your PonsMCP server before broadcast">
-                    <div className="flex flex-col gap-4 p-5">
+                    <div className="flex flex-1 flex-col justify-between gap-4 p-5">
                       {[
                         ['Settlement asset', 'USDG (6 decimals)'],
                         ['Network', 'Robinhood Chain · 4663'],

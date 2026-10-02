@@ -39,22 +39,14 @@ export function Hero() {
           {/* Left */}
           <div className={`space-y-8 transition-all duration-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
 
-            {/* CA + live price badges */}
+            {/* CA badge — restore when $MCP contract is announced
             <div className="flex flex-wrap items-center gap-2">
-              <div
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm"
-                style={{
-                  background: 'rgba(255,255,255,0.08)',
-                  border: '1px solid rgba(255,255,255,0.15)',
-                  backdropFilter: 'blur(10px)',
-                }}
-              >
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm" style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', backdropFilter: 'blur(10px)' }}>
                 <span style={{ color: 'rgba(255,255,255,0.55)', fontWeight: 500, fontSize: '0.8rem' }}>$MCP CA:</span>
-                {/* CA hidden until official announcement — restore this span + label when CA drops
-                <span style={{ color: '#f97316', fontFamily: "'DM Mono', monospace", fontSize: '0.8rem', fontWeight: 600, letterSpacing: '0.02em' }}>Coming soon</span>
-                */}
+                <span style={{ color: '#f97316', fontFamily: "'DM Mono', monospace", fontSize: '0.8rem', fontWeight: 600 }}>0x…</span>
               </div>
             </div>
+            */}
 
             {/* Headline - BIG like reference */}
             <div className="space-y-2">
@@ -72,8 +64,8 @@ export function Hero() {
               </h1>
             </div>
 
-            <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '1.1rem', lineHeight: 1.65, maxWidth: '480px' }}>
-              MCP server + SDK for Stripe's Machine Payments Protocol. Transparent on-chain settlement on Robinhood Chain.
+            <p style={{ color: 'rgba(255,255,255,0.72)', fontSize: '1.1rem', lineHeight: 1.65, maxWidth: '480px' }}>
+              MCP server + SDK for the Machine Payments Protocol. Settlement runs transparently on-chain, in USDG, on Robinhood Chain 4663.
             </p>
 
             {/* CTAs - pill style */}
@@ -99,8 +91,8 @@ export function Hero() {
             </div>
 
             {/* Quick capability strip */}
-            <div className="flex flex-wrap gap-x-6 gap-y-2 pt-2" style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.8rem' }}>
-              <span className="flex items-center gap-1.5"><Terminal className="w-3.5 h-3.5" /> 9 MCP tools</span>
+            <div className="flex flex-wrap gap-x-6 gap-y-2 pt-2" style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.8rem' }}>
+              <span className="flex items-center gap-1.5"><Terminal className="w-3.5 h-3.5" /> 14 MCP tools</span>
               <span className="flex items-center gap-1.5"><Cpu className="w-3.5 h-3.5" /> stdio + HTTP</span>
               <span className="flex items-center gap-1.5"><Wallet className="w-3.5 h-3.5" /> USDG settlement</span>
               <span className="flex items-center gap-1.5"><Shield className="w-3.5 h-3.5" /> policy guard</span>

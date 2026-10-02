@@ -109,7 +109,7 @@ export function StatusPage() {
         <div className="mt-8 overflow-hidden rounded-2xl" style={{ background: 'rgba(16,16,16,0.62)', border: '1px solid rgba(255,255,255,0.1)' }}>
           <div className="flex items-center justify-between border-b px-6 py-4" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
             <span className="text-sm font-bold text-white">
-              {running ? 'Running live checks…' : allOk ? 'All systems operational' : 'Issues detected'}
+              {running ? 'Running live checks…' : allOk ? 'All systems operational' : 'Some checks failed'}
             </span>
             <button onClick={() => void runChecks()} disabled={running}
               className="inline-flex items-center gap-1.5 rounded-full border border-white/10 px-3.5 py-1.5 text-xs font-semibold text-white/70 transition hover:text-white disabled:opacity-50">
@@ -139,7 +139,7 @@ export function StatusPage() {
           <p className="text-xs leading-6 text-white/45">
             <b className="text-white/70">What this page does not show:</b> historical uptime, incident history, or third-party infrastructure status.
             PonsMCP does not fabricate an SLA history — this page only reports what can be verified right now, from this browser.
-            {lastUpdated && <> Last run {lastUpdated.toLocaleTimeString('en-US')}.</>}
+            {lastUpdated && <> Last run {lastUpdated.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })} UTC{lastUpdated.getTimezoneOffset() <= 0 ? '+' : '-'}{String(Math.abs(lastUpdated.getTimezoneOffset() / 60)).padStart(2, '0')}.</>}
           </p>
         </div>
       </div>
