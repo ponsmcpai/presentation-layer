@@ -113,6 +113,9 @@ export function AppPage() {
   const [receipt, setReceipt] = useState<{ status: 'success' | 'reverted'; block: string; gas: string; hash: string } | null>(null);
   const [history, setHistory] = useState<IntentRow[]>([]);
   const [services, setServices] = useState<Service[]>([]);
+  const [quoteBusy, setQuoteBusy] = useState(false);
+  const [justPassedPolicy, setJustPassedPolicy] = useState(false);
+  const [liveTick, setLiveTick] = useState(false);
 
   const refreshLive = useCallback(async () => {
     const retry = async <T,>(work: () => Promise<T>): Promise<T | null> => {
@@ -129,9 +132,15 @@ export function AppPage() {
       block: block ? Number(hexToBig(block)).toLocaleString('en-US') : '—',
       gas: gas ? `${(Number(hexToBig(gas)) / 1e9).toFixed(3)} gwei` : '—',
     });
+    setLiveTick(true);
+    setTimeout(() => setLiveTick(false), 500);
   }, []);
 
   useEffect(() => { void refreshLive(); }, [refreshLive]);
+  useEffect(() => {
+    const id = setInterval(() => { void refreshLive(); }, 12000);
+    return () => clearInterval(id);
+  }, [refreshLive]);
 
   const refreshHistory = useCallback(async () => {
     try {
@@ -156,7 +165,13 @@ export function AppPage() {
     const parsed = Number(amount);
     if (!addrOk(merchant)) { setError('Enter a valid merchant wallet address (0x + 40 hex characters).'); return; }
     if (!Number.isFinite(parsed) || parsed <= 0 || parsed > 100) { setError('Amount must be greater than 0 and within the 100 USDG per-payment policy cap.'); return; }
+    setQuoteBusy(true);
+    setQuote(null);
+    setJustPassedPolicy(false);
     try {
+      // Give the policy check a visible beat — this is a real server round trip,
+      // not a canned animation, but we don't want it to feel instantaneous either.
+      await new Promise((r) => setTimeout(r, 380));
       const response = await fetch('/api/intents', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ merchant_address: merchant, amount_usdg: parsed.toFixed(6) }),
@@ -173,8 +188,11 @@ export function AppPage() {
         protectedResource: data.next.protected_resource,
         verifyEndpoint: data.next.verify,
       });
+      setJustPassedPolicy(true);
+      setTimeout(() => setJustPassedPolicy(false), 1600);
       void refreshHistory();
     } catch (e: any) { setError(e?.message ?? 'Could not create payment intent.'); }
+    finally { setQuoteBusy(false); }
   };
 
   const verifyReceipt = async () => {
@@ -309,15 +327,20 @@ export function AppPage() {
 
           {/* Stat strip */}
           <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
-            {[
-              ['$MCP token', 'Unannounced', 'No market data until launch'],
-              ['Latest block', live.block, 'Robinhood Chain · 4663'],
-              ['Network gas', live.gas, 'Gas token: ETH'],
-              ['MCP tools', '17 ready', 'Reads · payments · proofs'],
-            ].map(([label, value, sub]) => (
-              <div key={label} className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-4">
+            {([
+              { label: '$MCP token', value: 'Unannounced', sub: 'No market data until launch', live: false },
+              { label: 'Latest block', value: live.block, sub: 'Robinhood Chain · 4663', live: true },
+              { label: 'Network gas', value: live.gas, sub: 'Gas token: ETH', live: true },
+              { label: 'MCP tools', value: '17 ready', sub: 'Reads · payments · proofs', live: false },
+            ]).map(({ label, value, sub, live: isLive }) => (
+              <div key={label} className="relative rounded-xl border border-white/[0.08] bg-white/[0.03] p-4">
+                {isLive && (
+                  <span className="absolute right-3 top-3 flex items-center gap-1">
+                    <span className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse-dot" />
+                  </span>
+                )}
                 <p className="text-[11px] text-white/40">{label}</p>
-                <p className="mt-1 truncate text-base font-bold text-white" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>{value}</p>
+                <p className={`mt-1 truncate text-base font-bold text-white ${isLive && liveTick ? 'animate-count-flicker' : ''}`} style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>{value}</p>
                 <p className="mt-0.5 truncate font-mono text-[10px] text-white/30">{sub}</p>
               </div>
             ))}
@@ -327,11 +350,11 @@ export function AppPage() {
           {tab === 'New payment' && (
             <>
               <div className="mb-5 flex flex-wrap items-center gap-5 rounded-2xl p-4" style={{ background: 'rgba(16,16,16,0.62)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                <Step number={1} title="Create request" active={!quote} done={!!quote} />
+                <Step number={1} title="Create request" active={!quote && !quoteBusy} done={!!quote} />
                 <div className="hidden h-px w-8 sm:block" style={{ background: 'rgba(255,255,255,0.12)' }} />
-                <Step number={2} title="Review quote" active={!!quote} />
+                <Step number={2} title="Review quote" active={quoteBusy || !!quote} done={!!quote && !!receipt && receipt.status === 'success'} />
                 <div className="hidden h-px w-8 sm:block" style={{ background: 'rgba(255,255,255,0.12)' }} />
-                <Step number={3} title="Agent execution" />
+                <Step number={3} title="Agent execution" active={!!quote && !receipt} done={!!receipt && receipt.status === 'success'} />
                 <span className="ml-auto font-mono text-[11px] text-white/35">Payments never sign in this browser</span>
               </div>
 
@@ -371,14 +394,18 @@ export function AppPage() {
                       </div>
                     </label>
                     {error && <p className="rounded-lg px-3.5 py-3 text-sm" style={{ color: '#fca5a5', background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)' }}>{error}</p>}
-                    <button onClick={createQuote} className="btn-primary inline-flex w-full items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold">
-                      Create payment quote <ArrowRight className="h-4 w-4" />
+                    <button onClick={createQuote} disabled={quoteBusy} className="btn-primary inline-flex w-full items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold disabled:opacity-70">
+                      {quoteBusy ? (
+                        <><Loader2 className="h-4 w-4 animate-spin" /> Checking policy & pricing…</>
+                      ) : (
+                        <>Create payment quote <ArrowRight className="h-4 w-4" /></>
+                      )}
                     </button>
                   </div>
                 </Card>
 
                 <Card title="Policy guard" subtitle="Enforced inside your PonsMCP server before broadcast" className="lg:col-span-2 flex">
-                    <div className="flex flex-1 flex-col justify-between gap-4 p-5">
+                    <div className={`flex flex-1 flex-col justify-between gap-4 rounded-b-2xl p-5 transition-all duration-500 ${justPassedPolicy ? 'bg-green-500/[0.06]' : ''}`} style={justPassedPolicy ? { boxShadow: 'inset 0 0 0 1px rgba(74,222,128,0.35)' } : undefined}>
                       {[
                         ['Settlement asset', 'USDG (6 decimals)'],
                         ['Network', 'Robinhood Chain · 4663'],
@@ -391,16 +418,19 @@ export function AppPage() {
                         </div>
                       ))}
                       <div className="h-px bg-white/[0.08]" />
-                      <div className="flex items-center gap-2 text-xs text-white/45"><ShieldCheck className="h-4 w-4 text-green-400" /> Key stays in the agent runtime — the browser never signs.</div>
+                      <div className="flex items-center gap-2 text-xs" style={{ color: justPassedPolicy ? '#86efac' : 'rgba(255,255,255,0.45)' }}>
+                        <ShieldCheck className={`h-4 w-4 ${justPassedPolicy ? 'text-green-400 animate-pop-in' : 'text-green-400'}`} />
+                        {justPassedPolicy ? 'Just checked — this request passed every rule above.' : 'Key stays in the agent runtime — the browser never signs.'}
+                      </div>
                     </div>
                 </Card>
               </div>
 
               {quote && (
-                <section className="mt-5 overflow-hidden rounded-2xl" style={{ background: 'rgba(20,20,20,0.75)', border: '1px solid rgba(249,115,22,0.32)' }}>
+                <section className="mt-5 overflow-hidden rounded-2xl animate-slide-fade-in" style={{ background: 'rgba(20,20,20,0.75)', border: '1px solid rgba(249,115,22,0.32)' }}>
                   <div className="flex flex-wrap items-center justify-between gap-3 border-b px-6 py-4" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
-                    <div className="flex items-center gap-2"><CheckCircle2 className="h-5 w-5 text-green-400" /><h2 className="font-bold text-white">Quote ready for your agent</h2></div>
-                    <span className="rounded-full px-2.5 py-1 font-mono text-xs" style={{ background: 'rgba(74,222,128,0.12)', color: '#86efac' }}>POLICY PASSED</span>
+                    <div className="flex items-center gap-2"><CheckCircle2 className="h-5 w-5 text-green-400 animate-pop-in" /><h2 className="font-bold text-white">Quote ready for your agent</h2></div>
+                    <span className="rounded-full px-2.5 py-1 font-mono text-xs animate-pop-in" style={{ background: 'rgba(74,222,128,0.12)', color: '#86efac' }}>POLICY PASSED</span>
                   </div>
                   <div className="grid gap-6 p-6 lg:grid-cols-2">
                     <div className="grid grid-cols-2 gap-3">
@@ -419,6 +449,28 @@ export function AppPage() {
                         Run this through your configured MCP client. The server owns signing and returns the transaction hash and verified receipt.
                       </p>
                     </div>
+                  </div>
+
+                  {/* What happens next — the missing piece: make the payoff explicit, not implied */}
+                  <div className="border-t px-6 py-5" style={{ borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(249,115,22,0.04)' }}>
+                    <p className="mb-3 text-xs font-bold uppercase tracking-[0.1em] text-[#fdba74]">What you get back</p>
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <div className="flex items-start gap-2.5">
+                        <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/10 font-mono text-[10px] font-bold text-white/60">1</span>
+                        <p className="text-xs leading-relaxed text-white/60"><span className="font-semibold text-white/85">A transaction hash</span> — proof the agent actually broadcast your payment to Robinhood Chain.</p>
+                      </div>
+                      <div className="flex items-start gap-2.5">
+                        <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/10 font-mono text-[10px] font-bold text-white/60">2</span>
+                        <p className="text-xs leading-relaxed text-white/60"><span className="font-semibold text-white/85">A verified receipt</span> — block number + gas used, read straight from the chain, not from a database.</p>
+                      </div>
+                      <div className="flex items-start gap-2.5">
+                        <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/10 font-mono text-[10px] font-bold text-white/60">3</span>
+                        <p className="text-xs leading-relaxed text-white/60"><span className="font-semibold text-white/85">An unlocked resource</span> — if the merchant gated something behind this payment, the link opens here.</p>
+                      </div>
+                    </div>
+                    <button onClick={() => setTab('Receipts')} className="btn-secondary mt-4 inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold text-white/80">
+                      Paste the hash here once your agent pays <ArrowRight className="h-3.5 w-3.5" />
+                    </button>
                   </div>
                 </section>
               )}
@@ -441,18 +493,58 @@ export function AppPage() {
                   {receiptBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileCheck2 className="h-4 w-4" />} Verify receipt
                 </button>
               </div>
-              {receipt && (
-                <div className="mx-6 mb-6 flex flex-wrap items-center justify-between gap-4 rounded-xl p-4" style={{ background: receipt.status === 'success' ? 'rgba(74,222,128,0.08)' : 'rgba(248,113,113,0.08)', border: `1px solid ${receipt.status === 'success' ? 'rgba(74,222,128,0.25)' : 'rgba(248,113,113,0.25)'}` }}>
-                  <div className="flex items-center gap-3">
-                    <CheckCircle2 className="h-5 w-5" style={{ color: receipt.status === 'success' ? '#4ade80' : '#f87171' }} />
-                    <div>
-                      <p className="text-sm font-bold text-white">{receipt.status === 'success' ? 'Payment confirmed on-chain' : 'Transaction reverted'}</p>
-                      <p className="mt-0.5 text-xs text-white/50">Block {receipt.block} · {receipt.gas} gas used</p>
+
+              {receiptBusy && (
+                <div className="mx-6 mb-6 overflow-hidden rounded-xl p-5" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                  <div className="relative h-1.5 overflow-hidden rounded-full bg-white/10">
+                    <div className="absolute inset-y-0 w-1/3 rounded-full bg-gradient-to-r from-transparent via-[#f97316] to-transparent animate-scan-sweep" />
+                  </div>
+                  <p className="mt-3 font-mono text-xs text-white/45">Reading Robinhood Chain for a matching receipt…</p>
+                </div>
+              )}
+
+              {receipt && !receiptBusy && (
+                <div className="mx-6 mb-6 overflow-hidden rounded-xl animate-slide-fade-in" style={{ background: receipt.status === 'success' ? 'rgba(74,222,128,0.07)' : 'rgba(248,113,113,0.07)', border: `1px solid ${receipt.status === 'success' ? 'rgba(74,222,128,0.3)' : 'rgba(248,113,113,0.3)'}` }}>
+                  <div className="flex flex-wrap items-center justify-between gap-4 p-5">
+                    <div className="flex items-center gap-3">
+                      <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full animate-pop-in" style={{ background: receipt.status === 'success' ? 'rgba(74,222,128,0.18)' : 'rgba(248,113,113,0.18)' }}>
+                        {receipt.status === 'success' && <span className="absolute inset-0 rounded-full border border-green-400/60 animate-ring-grow" />}
+                        <CheckCircle2 className="h-5 w-5" style={{ color: receipt.status === 'success' ? '#4ade80' : '#f87171' }} />
+                      </div>
+                      <div>
+                        <p className="text-base font-bold text-white">{receipt.status === 'success' ? 'Payment confirmed on-chain' : 'Transaction reverted'}</p>
+                        <p className="mt-0.5 text-xs text-white/50">This is a live read from the chain — not a cached status.</p>
+                      </div>
+                    </div>
+                    {receipt.status === 'success' && (
+                      <span className="rounded-full px-3 py-1 font-mono text-[11px] font-bold" style={{ background: 'rgba(74,222,128,0.15)', color: '#86efac' }}>FINALIZED</span>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 px-5 pb-5 sm:grid-cols-4">
+                    <div className="rounded-lg p-3" style={{ background: 'rgba(0,0,0,0.22)' }}>
+                      <p className="text-[10px] uppercase tracking-wide text-white/35">Block</p>
+                      <p className="mt-1 truncate font-mono text-sm font-bold text-white">{receipt.block}</p>
+                    </div>
+                    <div className="rounded-lg p-3" style={{ background: 'rgba(0,0,0,0.22)' }}>
+                      <p className="text-[10px] uppercase tracking-wide text-white/35">Gas used</p>
+                      <p className="mt-1 truncate font-mono text-sm font-bold text-white">{receipt.gas}</p>
+                    </div>
+                    <div className="col-span-2 rounded-lg p-3 sm:col-span-2" style={{ background: 'rgba(0,0,0,0.22)' }}>
+                      <p className="text-[10px] uppercase tracking-wide text-white/35">Transaction hash</p>
+                      <p className="mt-1 truncate font-mono text-xs font-bold text-[#fed7aa]">{receipt.hash}</p>
                     </div>
                   </div>
-                  <div className="flex flex-wrap items-center gap-4">
-                    <a href={`${RH_EXPLORER}/tx/${receipt.hash}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#f97316]">View proof <ExternalLink className="h-3.5 w-3.5" /></a>
-                    {quote && receipt.status === 'success' && quote.protectedResource && <a href={quote.protectedResource} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#86efac]">Open unlocked resource <ExternalLink className="h-3.5 w-3.5" /></a>}
+
+                  <div className="flex flex-wrap items-center gap-3 border-t px-5 py-4" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
+                    <a href={`${RH_EXPLORER}/tx/${receipt.hash}`} target="_blank" rel="noopener noreferrer" className="btn-secondary inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-bold text-[#fed7aa]">
+                      View on Blockscout <ExternalLink className="h-3.5 w-3.5" />
+                    </a>
+                    {quote && receipt.status === 'success' && quote.protectedResource && (
+                      <a href={quote.protectedResource} target="_blank" rel="noopener noreferrer" className="btn-primary inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-bold">
+                        Open the resource this unlocked <ExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                    )}
                   </div>
                 </div>
               )}
