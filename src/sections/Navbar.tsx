@@ -111,6 +111,16 @@ export function Navbar() {
 
           {/* CTA */}
           <div className="flex items-center gap-2">
+            <a
+              href="https://x.com/Pons_MCP"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hidden sm:flex items-center rounded-full px-3 py-2 text-xs font-bold transition-colors"
+              style={{ color: 'rgba(255,255,255,0.6)', background: 'rgba(255,255,255,0.06)' }}
+              aria-label="PonsMCP on X"
+            >
+              𝕏
+            </a>
             <Link to="/app" className="hidden sm:block">
               <button
                 className="btn-primary px-5 py-2.5 text-sm font-semibold"

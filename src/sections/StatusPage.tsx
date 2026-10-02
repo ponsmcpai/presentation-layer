@@ -1,203 +1,151 @@
-import { useState, useEffect } from 'react';
-import { CheckCircle, AlertCircle, ArrowLeft, RefreshCw } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { CheckCircle, AlertCircle, ArrowLeft, RefreshCw, Loader2 } from 'lucide-react';
 
-const generateServices = () => [
-  { name: 'MPP Gateway',         description: 'Stripe Machine Payments Protocol endpoint', status: 'operational', latency: `${30 + Math.floor(Math.random() * 20)}ms` },
-  { name: 'Robinhood Chain RPC',  description: 'On-chain settlement via Robinhood Chain (4663)', status: 'operational', latency: `${55 + Math.floor(Math.random() * 20)}ms` },
-  { name: 'Escrow Contract',      description: 'On-chain escrow & proof of delivery',        status: 'operational', latency: `${10 + Math.floor(Math.random() * 8)}ms`  },
-  { name: 'Service Discovery',    description: 'Directory API & MCP manifest resolution',    status: 'operational', latency: `${20 + Math.floor(Math.random() * 10)}ms` },
-  { name: 'Policy Engine',        description: 'Spending limits & approval workflow',         status: 'operational', latency: `${7  + Math.floor(Math.random() * 6)}ms`  },
-  { name: 'Audit Log Service',    description: 'Transaction receipts & dispute resolution',  status: 'operational', latency: `${15 + Math.floor(Math.random() * 8)}ms`  },
+interface Check {
+  name: string;
+  description: string;
+  status: 'operational' | 'degraded' | 'down' | 'checking';
+  latencyMs: number | null;
+  link?: string;
+}
+
+const INITIAL: Check[] = [
+  { name: 'Payment intents API', description: 'POST /api/intents + public ledger', status: 'checking', latencyMs: null },
+  { name: 'Merchant registry API', description: 'Service catalog + 402 resource unlock', status: 'checking', latencyMs: null },
+  { name: 'Read-only chain RPC proxy', description: 'Whitelisted eth_* methods via /api/rpc', status: 'checking', latencyMs: null },
+  { name: 'Robinhood Chain (4663)', description: 'Direct eth_chainId + latest block', status: 'checking', latencyMs: null, link: 'https://robinhoodchain.blockscout.com' },
+  { name: 'npm package', description: '@ponsmcp/sdk — registry + latest version', status: 'checking', latencyMs: null, link: 'https://www.npmjs.com/package/@ponsmcp/sdk' },
 ];
 
-const incidents = [
-  { date: 'Apr 7, 2026', title: 'No incidents', description: 'All systems operational', type: 'ok' },
-  { date: 'Apr 6, 2026', title: 'No incidents', description: 'All systems operational', type: 'ok' },
-  { date: 'Apr 5, 2026', title: 'No incidents', description: 'All systems operational', type: 'ok' },
-];
-
-const uptimeDays = Array.from({ length: 90 }, (_, i) => ({
-  day: i,
-  status: Math.random() > 0.02 ? 'operational' : 'degraded',
-}));
-
-function StatusBadge({ status }: { status: string }) {
-  if (status === 'operational') {
-    return (
-      <span className="flex items-center gap-1.5 text-sm font-medium" style={{ color: '#4ade80' }}>
-        <CheckCircle className="w-4 h-4" />
-        Operational
-      </span>
-    );
+async function timeFetch(url: string, init?: RequestInit): Promise<{ ok: boolean; ms: number; status: number }> {
+  const t0 = performance.now();
+  try {
+    const res = await fetch(url, { ...init, signal: AbortSignal.timeout(10_000) });
+    return { ok: res.ok, ms: Math.round(performance.now() - t0), status: res.status };
+  } catch {
+    return { ok: false, ms: Math.round(performance.now() - t0), status: 0 };
   }
-  if (status === 'degraded') {
-    return (
-      <span className="flex items-center gap-1.5 text-sm font-medium" style={{ color: '#fbbf24' }}>
-        <AlertCircle className="w-4 h-4" />
-        Degraded
-      </span>
-    );
-  }
-  return (
-    <span className="flex items-center gap-1.5 text-sm font-medium" style={{ color: '#f87171' }}>
-      <AlertCircle className="w-4 h-4" />
-      Down
-    </span>
-  );
 }
 
 export function StatusPage() {
-  const [lastUpdated, setLastUpdated] = useState(new Date());
-  const [refreshing, setRefreshing] = useState(false);
-  const [services, setServices] = useState(generateServices());
-  const allOperational = services.every(s => s.status === 'operational');
+  const [checks, setChecks] = useState<Check[]>(INITIAL);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [running, setRunning] = useState(false);
 
-  // Auto-refresh every 5 seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setServices(generateServices());
-      setLastUpdated(new Date());
-    }, 5000);
-    return () => clearInterval(interval);
+  const runChecks = useCallback(async () => {
+    setRunning(true);
+    setChecks(INITIAL.map((c) => ({ ...c, status: 'checking' as const })));
+
+    const set = (name: string, patch: Partial<Check>) =>
+      setChecks((prev) => prev.map((c) => (c.name === name ? { ...c, ...patch } : c)));
+
+    // 1. Intents API — real POST, expect a JSON intent (costs nothing, D1 write)
+    {
+      const r = await timeFetch('/api/intents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ merchant_address: '0x0000000000000000000000000000000000000001', amount_usdg: '0.010000' }),
+      });
+      set('Payment intents API', { status: r.ok ? 'operational' : 'down', latencyMs: r.ms });
+    }
+
+    // 2. Merchant registry catalog
+    {
+      const r = await timeFetch('/api/merchant/services');
+      set('Merchant registry API', { status: r.ok ? 'operational' : 'down', latencyMs: r.ms });
+    }
+
+    // 3. RPC proxy must REJECT write methods — a 403 proves the guard is alive
+    {
+      const r = await timeFetch('/api/rpc', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_sendRawTransaction', params: ['0x00'] }),
+      });
+      set('Read-only chain RPC proxy', { status: r.status === 403 ? 'operational' : 'degraded', latencyMs: r.ms });
+    }
+
+    // 4. Chain direct
+    {
+      const r = await timeFetch('/api/rpc', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'eth_blockNumber', params: [] }),
+      });
+      set('Robinhood Chain (4663)', { status: r.ok ? 'operational' : 'down', latencyMs: r.ms });
+    }
+
+    // 5. npm registry
+    {
+      const r = await timeFetch('https://registry.npmjs.org/@ponsmcp/sdk');
+      set('npm package', { status: r.ok ? 'operational' : 'down', latencyMs: r.ms });
+    }
+
+    setLastUpdated(new Date());
+    setRunning(false);
   }, []);
 
-  const refresh = () => {
-    setRefreshing(true);
-    setTimeout(() => {
-      setServices(generateServices());
-      setLastUpdated(new Date());
-      setRefreshing(false);
-    }, 800);
+  useEffect(() => { void runChecks(); }, [runChecks]);
+
+  const badge = (status: Check['status']) => {
+    if (status === 'checking') return <span className="flex items-center gap-1.5 text-sm font-medium text-white/40"><Loader2 className="h-4 w-4 animate-spin" /> Checking…</span>;
+    if (status === 'operational') return <span className="flex items-center gap-1.5 text-sm font-medium" style={{ color: '#4ade80' }}><CheckCircle className="h-4 w-4" /> Operational</span>;
+    if (status === 'degraded') return <span className="flex items-center gap-1.5 text-sm font-medium" style={{ color: '#fbbf24' }}><AlertCircle className="h-4 w-4" /> Degraded</span>;
+    return <span className="flex items-center gap-1.5 text-sm font-medium" style={{ color: '#f87171' }}><AlertCircle className="h-4 w-4" /> Down</span>;
   };
+
+  const allOk = checks.every((c) => c.status === 'operational');
 
   return (
     <div className="min-h-screen" style={{ paddingTop: '80px' }}>
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-16">
-
-        {/* Back link */}
-        <a
-          href="/"
-          className="inline-flex items-center gap-2 text-sm mb-10 transition-colors"
-          style={{ color: 'rgba(255,255,255,0.5)', textDecoration: 'none' }}
-          onMouseEnter={e => (e.currentTarget.style.color = 'white')}
-          onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.5)')}
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Pons MCP
+      <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
+        <a href="/" className="mb-10 inline-flex items-center gap-2 text-sm text-white/50 transition-colors hover:text-white">
+          <ArrowLeft className="h-4 w-4" /> Back to home
         </a>
 
-        {/* Overall status */}
-        <div
-          className="rounded-2xl p-8 mb-8"
-          style={{
-            background: allOperational ? 'rgba(74,222,128,0.08)' : 'rgba(251,191,36,0.08)',
-            border: `1px solid ${allOperational ? 'rgba(74,222,128,0.25)' : 'rgba(251,191,36,0.25)'}`,
-            backdropFilter: 'blur(12px)',
-          }}
-        >
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div className="flex items-center gap-4">
-              <div
-                className="w-14 h-14 rounded-2xl flex items-center justify-center"
-                style={{ background: allOperational ? 'rgba(74,222,128,0.15)' : 'rgba(251,191,36,0.15)' }}
-              >
-                <CheckCircle className="w-7 h-7" style={{ color: '#4ade80' }} />
-              </div>
-              <div>
-                <h1 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, fontSize: '1.5rem', color: 'white', letterSpacing: '-0.02em' }}>
-                  {allOperational ? 'All Systems Operational' : 'Some Systems Degraded'}
-                </h1>
-                <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.875rem', marginTop: '4px' }}>
-                  Last updated {lastUpdated.toLocaleTimeString()}
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={refresh}
-              className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all"
-              style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.12)' }}
-            >
-              <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-              Refresh
+        <h1 className="text-4xl font-extrabold tracking-[-0.04em] text-white" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+          System <span className="gradient-text">status</span>
+        </h1>
+        <p className="mt-3 text-sm leading-6 text-white/50">
+          Live checks, run from your browser against the real endpoints — no cached green dots. Results are specific to your network path.
+        </p>
+
+        <div className="mt-8 overflow-hidden rounded-2xl" style={{ background: 'rgba(16,16,16,0.62)', border: '1px solid rgba(255,255,255,0.1)' }}>
+          <div className="flex items-center justify-between border-b px-6 py-4" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
+            <span className="text-sm font-bold text-white">
+              {running ? 'Running live checks…' : allOk ? 'All systems operational' : 'Issues detected'}
+            </span>
+            <button onClick={() => void runChecks()} disabled={running}
+              className="inline-flex items-center gap-1.5 rounded-full border border-white/10 px-3.5 py-1.5 text-xs font-semibold text-white/70 transition hover:text-white disabled:opacity-50">
+              {running ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />} Re-run
             </button>
           </div>
-        </div>
-
-        {/* 90-day uptime bar */}
-        <div className="card-clean p-6 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, color: 'white', fontSize: '0.95rem' }}>
-              90-Day Uptime
-            </h2>
-            <span style={{ color: '#4ade80', fontWeight: 600, fontSize: '0.9rem' }}>99.98%</span>
-          </div>
-          <div className="flex gap-0.5">
-            {uptimeDays.map((d) => (
-              <div
-                key={d.day}
-                className="flex-1 h-8 rounded-sm transition-all hover:opacity-80"
-                title={d.status}
-                style={{ background: d.status === 'operational' ? 'rgba(74,222,128,0.55)' : 'rgba(251,191,36,0.55)' }}
-              />
+          <div className="divide-y" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+            {checks.map((c) => (
+              <div key={c.name} className="flex flex-wrap items-center justify-between gap-3 px-6 py-4">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-white">
+                    {c.name}
+                    {c.link && <a href={c.link} target="_blank" rel="noopener noreferrer" className="ml-2 text-xs font-medium text-[#f97316]">↗</a>}
+                  </p>
+                  <p className="mt-0.5 text-xs text-white/40">{c.description}</p>
+                </div>
+                <div className="flex items-center gap-4">
+                  {c.latencyMs !== null && <span className="font-mono text-xs text-white/35">{c.latencyMs} ms</span>}
+                  {badge(c.status)}
+                </div>
+              </div>
             ))}
           </div>
-          <div className="flex justify-between mt-2" style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.75rem' }}>
-            <span>90 days ago</span>
-            <span>Today</span>
-          </div>
         </div>
 
-        {/* Services list */}
-        <div className="card-clean mb-8 overflow-hidden">
-          <div className="px-6 py-4 border-b" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
-            <h2 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, color: 'white', fontSize: '0.95rem' }}>
-              Services
-            </h2>
-          </div>
-          {services.map((service, i) => (
-            <div
-              key={service.name}
-              className="px-6 py-4 flex items-center justify-between gap-4"
-              style={{
-                borderBottom: i < services.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none',
-              }}
-            >
-              <div className="flex-1 min-w-0">
-                <p style={{ fontWeight: 600, color: 'white', fontSize: '0.9rem' }}>{service.name}</p>
-                <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.8rem', marginTop: '2px' }}>{service.description}</p>
-              </div>
-              <div className="flex items-center gap-6 flex-shrink-0">
-                <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '0.8rem', color: 'rgba(255,255,255,0.35)' }}>
-                  {service.latency}
-                </span>
-                <StatusBadge status={service.status} />
-              </div>
-            </div>
-          ))}
+        <div className="mt-6 rounded-2xl p-5" style={{ background: 'rgba(16,16,16,0.4)', border: '1px solid rgba(255,255,255,0.08)' }}>
+          <p className="text-xs leading-6 text-white/45">
+            <b className="text-white/70">What this page does not show:</b> historical uptime, incident history, or third-party infrastructure status.
+            PonsMCP does not fabricate an SLA history — this page only reports what can be verified right now, from this browser.
+            {lastUpdated && <> Last run {lastUpdated.toLocaleTimeString('en-US')}.</>}
+          </p>
         </div>
-
-        {/* Incident history */}
-        <div className="card-clean overflow-hidden">
-          <div className="px-6 py-4 border-b" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
-            <h2 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, color: 'white', fontSize: '0.95rem' }}>
-              Incident History
-            </h2>
-          </div>
-          {incidents.map((inc, i) => (
-            <div
-              key={i}
-              className="px-6 py-4 flex items-start gap-4"
-              style={{ borderBottom: i < incidents.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}
-            >
-              <CheckCircle className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: '#4ade80' }} />
-              <div>
-                <p style={{ fontWeight: 600, color: 'white', fontSize: '0.88rem' }}>{inc.date} — {inc.title}</p>
-                <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.8rem', marginTop: '2px' }}>{inc.description}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-
       </div>
     </div>
   );

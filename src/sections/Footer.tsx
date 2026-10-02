@@ -19,7 +19,10 @@ export function Footer() {
               Autonomous transaction infrastructure for AI agents on the Machine Payments Protocol.
             </p>
             <div className="flex gap-2">
-              {[{ href: 'https://github.com/ponsmcppayment/sdk', icon: Github }].map(({ href, icon: Icon }) => (
+              {[
+                { href: 'https://github.com/ponsmcpai', label: 'GitHub', icon: Github },
+                { href: 'https://x.com/Pons_MCP', label: 'X (Twitter)', icon: null },
+              ].map(({ href, icon: Icon }) => (
                 <a
                   key={href}
                   href={href}
@@ -30,7 +33,7 @@ export function Footer() {
                   onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'white'; (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.13)'; }}
                   onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.5)'; (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.07)'; }}
                 >
-                  <Icon className="w-4 h-4" />
+                  {Icon ? <Icon className="w-4 h-4" /> : <span className="w-4 h-4 flex items-center justify-center text-[11px] font-bold">𝕏</span>}
                 </a>
               ))}
             </div>

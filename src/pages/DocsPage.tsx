@@ -97,7 +97,10 @@ export function DocsPage() {
         <article className="min-w-0">
           <div className="mb-4 flex items-center justify-between gap-3">
             <Link to="/" className="inline-flex items-center gap-2 text-sm text-white/50 transition hover:text-white"><ArrowLeft className="h-4 w-4" /> Back to PonsMCP</Link>
-            <a href="https://github.com/ponsmcpai/ponsmcp-sdk" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#f97316]">GitHub <ExternalLink className="h-3.5 w-3.5" /></a>
+            <div className="flex items-center gap-4">
+              <a href="https://x.com/Pons_MCP" target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-white/50 transition hover:text-white">𝕏 @Pons_MCP</a>
+              <a href="https://github.com/ponsmcpai/ponsmcp-sdk" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#f97316]">GitHub <ExternalLink className="h-3.5 w-3.5" /></a>
+            </div>
           </div>
 
           <span className="inline-flex rounded-full border border-[#f97316]/30 bg-[#f97316]/10 px-3 py-1 font-mono text-[11px] uppercase tracking-[0.14em] text-[#fdba74]">docs · complete guide</span>
@@ -121,9 +124,12 @@ export function DocsPage() {
           {active === 'overview' && (
             <div className="mt-10 space-y-4">
               {[
-                ['What is PonsMCP?', 'A Model Context Protocol server and TypeScript SDK. Agents call tools to read pons launch data, quote payments, and settle in USDG with verifiable receipts.'],
-                ['Who holds keys?', 'Your agent runtime does. The browser console never receives a private key and never signs.'],
-                ['What makes a payment "done"?', 'A successful on-chain receipt with the exact USDG transfer — not a UI confirmation.'],
+                ['What is PonsMCP?', 'A Model Context Protocol server and TypeScript SDK. Agents call tools to read pons launch data, quote payments, and settle in USDG with verifiable receipts. The server runs locally over stdio — plug it into Claude, Cursor, or any MCP host.'],
+                ['Who holds keys?', 'Your agent runtime does, via PONSMCP_PRIVATE_KEY. The browser console never receives a private key and never signs. Read-only tools work with no key at all.'],
+                ['What makes a payment "done"?', 'A successful on-chain receipt with the exact USDG transfer — not a UI confirmation. pons_pay verifies status 0x1 plus token, recipient, and amount before returning.'],
+                ['Which chain and asset?', 'Robinhood Chain, chain ID 4663 (Arbitrum Orbit L2). Settlement runs in USDG, a 6-decimal stablecoin. Gas is paid in ETH.'],
+                ['What does it cost?', 'The SDK is free and open source. You pay only network gas (fractions of a cent) and whatever a merchant charges for their service.'],
+                ['Is the $MCP token live?', 'Not yet. The contract address is unannounced — any token claiming to be $MCP before the official announcement is fake.'],
               ].map(([title, text]) => (
                 <div key={title} className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
                   <h3 className="font-semibold text-white">{title}</h3>
@@ -197,7 +203,52 @@ ponsmcp`}</Code>
                   </div>
                 ))}
               </div>
-              <p className="mt-4 text-sm leading-7 text-white/60">Only <span className="font-mono text-[#fdba74]">pons_pay</span> moves funds. Everything else is read-only and needs no wallet.</p>
+              <p className="mt-4 text-sm leading-7 text-white/60">Only <span className="font-mono text-[#fdba74]">pons_pay</span> and <span className="font-mono text-[#fdba74]">pons_pay_resource</span> move funds. Everything else is read-only and needs no wallet.</p>
+
+              <h3 className="mt-8 text-lg font-bold text-white">Payment tools in detail</h3>
+              <div className="mt-3 grid gap-3">
+                {[
+                  ['pons_quote', 'Converts a USD amount into USDG base units (6 decimals) without touching a wallet. Always run this first — the output is exactly what pons_pay settles.'],
+                  ['pons_pay', 'The settlement tool. Order of operations: policy check (per-tx cap, daily budget) → balance check → EIP-155 local signature → broadcast → receipt wait (≤30s) → decoded USDG transfers. Returns stage on failure: policy_denied, broadcast, confirmed, failed, timeout.'],
+                  ['pons_pay_resource', 'Fetches a URL. If it answers HTTP 402, parses the price and recipient (5 supported body shapes), then settles exactly that price through the same policy pipeline. A 402 that fails parsing never broadcasts.'],
+                  ['pons_tx_status', 'Independent receipt lookup for any hash: status, block, gas used, decoded transfers. Merchants use this to re-verify a payer’s claim instead of trusting a screenshot.'],
+                ].map(([tool, text]) => (
+                  <div key={tool} className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                    <p className="font-mono text-sm text-[#fdba74]">{tool}</p>
+                    <p className="mt-1.5 text-sm leading-6 text-white/55">{text}</p>
+                  </div>
+                ))}
+              </div>
+
+              <h3 className="mt-8 text-lg font-bold text-white">Environment variables</h3>
+              <div className="mt-3 overflow-hidden rounded-xl border border-white/10">
+                {[
+                  ['PONSMCP_PRIVATE_KEY', 'agent signing key (64 hex). Omit for read-only use.', 'optional'],
+                  ['PONSMCP_ALCHEMY_KEY', 'routes all chain reads through Alchemy — recommended for agents.', 'recommended'],
+                  ['PONSMCP_MAX_PER_TX', 'per-transaction cap in USDG base units. Default 100000000 (100 USDG).', 'policy'],
+                  ['PONSMCP_DAILY_LIMIT', 'daily budget in base units. Default 1000000000 (1,000 USDG).', 'policy'],
+                  ['PONSMCP_RPC_URL', 'pin a single chain-4663 endpoint, overriding the fallback chain.', 'advanced'],
+                ].map(([k, v, tag]) => (
+                  <div key={k} className="flex flex-wrap items-center justify-between gap-2 border-b border-white/[0.07] bg-white/[0.02] px-4 py-3 text-xs last:border-0">
+                    <span className="font-mono text-white/75">{k}</span>
+                    <span className="text-right text-white/45">{v} <span className="ml-2 rounded border border-white/10 px-1.5 py-0.5 font-mono text-[10px] text-white/35">{tag}</span></span>
+                  </div>
+                ))}
+              </div>
+
+              <h3 className="mt-8 text-lg font-bold text-white">Running the server</h3>
+              <div className="mt-3 rounded-xl bg-[#101010] p-4">
+                <pre className="overflow-x-auto text-[12.5px] leading-6 text-[#ffce9f]"><code>{`# install globally, then run the stdio server
+npm install -g @ponsmcp/sdk
+ponsmcp
+
+# or wire it into an MCP host (Claude Desktop / Cursor):
+{
+  "mcpServers": {
+    "ponsmcp": { "command": "ponsmcp" }
+  }
+}`}</code></pre>
+              </div>
             </div>
           )}
 
