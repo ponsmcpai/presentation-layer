@@ -1296,6 +1296,7 @@ export function AppPage() {
               ]},
               { group: 'CHAIN & TRANSFER', note: 'Low-level reads and token movement', tools: [
                 ['pons_chain_info', 'Chain ID, block, gas, canonical addresses', false],
+                ['pons_price', 'Live PONS price, liquidity, top DEX pairs', false],
                 ['pons_token_info', 'ERC-20 metadata for any token', false],
                 ['pons_send_token', 'Send any ERC-20 by ticker or address', true],
                 ['pons_send_eth', 'Send native ETH', true],
