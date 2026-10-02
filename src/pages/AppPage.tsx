@@ -1204,6 +1204,21 @@ export function AppPage() {
                 <div className="grid gap-4 p-5 sm:grid-cols-2">
                   {services.map((service) => {
                     const meta: Record<string, { desc: string; features: string[]; icon: string }> = {
+                      svc_devsandbox01: {
+                        desc: 'One-click end-to-end test of your payment rail at micro scale. Settles for a fraction of a cent and returns a full verification breakdown.',
+                        features: ['Cheapest live settlement', 'Full receipt verification', 'Proves the whole rail works'],
+                        icon: '⚡',
+                      },
+                      svc_signalfeed01: {
+                        desc: 'The 10 latest notifier-captured Grade A signals as structured data: price, market cap, ATH drawdown, liquidity, holders — delivered at unlock.',
+                        features: ['Latest 10 Grade A signals', 'Structured JSON payload', 'Same data as Live Signals tab'],
+                        icon: '📡',
+                      },
+                      svc_stockscreen01: {
+                        desc: 'All 19 Robinhood Chain tokenized stocks live-ranked by DEX liquidity at unlock time: price, 24h change, venue — a complete market snapshot.',
+                        features: ['All 19 stock tokens ranked', 'Live liquidity ordering', '24h change per ticker'],
+                        icon: '📈',
+                      },
                       svc_sdkguide01: {
                         desc: 'Drop-in TypeScript quickstart for wiring an agent to PonsMCP: install, key handling, policy caps, first settlement — copy-paste ready.',
                         features: ['Install & config commands', 'Working pay() example', 'Policy defaults explained'],
