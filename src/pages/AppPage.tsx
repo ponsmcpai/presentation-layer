@@ -238,16 +238,15 @@ export function AppPage() {
     return () => clearInterval(id);
   }, [refreshLive]);
 
-  const MCP_CA = '0x15da2596F4C21227185466066Bf0f19d9D526B8a';
   const refreshMcpPrice = useCallback(async () => {
     try {
-      const res = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${MCP_CA}`);
+      // Same-origin proxy — the site CSP forbids direct DexScreener calls from the browser.
+      const res = await fetch('/api/mcp-price');
       const data = await res.json();
-      const pair = (data.pairs ?? []).filter((p: any) => p.chainId === 'robinhood').sort((a: any, b: any) => (b.liquidity?.usd ?? 0) - (a.liquidity?.usd ?? 0))[0];
-      if (pair) {
+      if (res.ok && data.priceUsd) {
         setMcpPrice({
-          priceUsd: Number(pair.priceUsd).toLocaleString('en-US', { minimumSignificantDigits: 3, maximumSignificantDigits: 3 }),
-          change24h: pair.priceChange?.h24 ?? null,
+          priceUsd: Number(data.priceUsd).toLocaleString('en-US', { minimumSignificantDigits: 3, maximumSignificantDigits: 3 }),
+          change24h: data.change24h ?? null,
         });
       }
     } catch { /* keep last known value; never show a fake price */ }
