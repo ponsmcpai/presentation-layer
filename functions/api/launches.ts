@@ -50,6 +50,9 @@ export async function onRequestGet() {
     const { tier, grad, liq } = screen(l);
     return {
       name: l.name, symbol: l.symbol, token: l.token,
+      logo: l.logo ?? null,
+      deployer: l.deployer ?? null,
+      pool: l.pool ?? null,
       priceUsd: l.priceUsd ?? null,
       marketCapUsd: l.marketCapUsd ?? null,
       liquidityUsd: l.liquidityUsd ?? null,

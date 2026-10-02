@@ -104,33 +104,381 @@ function Card({ title, subtitle, children, accent, className = '' }: { title: st
   );
 }
 
-function LaunchIntelPanel() {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [ranking, setRanking] = useState<{
-    total: number;
-    summary: Record<string, number>;
-    launches: Array<{
-      name?: string; symbol?: string; token?: string; tier: string;
-      priceUsd?: number; marketCapUsd?: number; liquidityUsd?: number | null;
-      graduationProgressPct?: number | null; graduated?: boolean;
-      launchedAt?: string; description?: string;
-    }>;
-  } | null>(null);
+// ── Shared tiny SVG sparkline (no deps) ────────────────────────────────
+function Sparkline({ points, width = 260, height = 64, color = '#f97316' }: { points: [number, number][]; width?: number; height?: number; color?: string }) {
+  if (!points || points.length < 2) return <div style={{ height }} />;
+  const xs = points.map((p) => p[0]);
+  const ys = points.map((p) => p[1]);
+  const minX = Math.min(...xs), maxX = Math.max(...xs);
+  const minY = Math.min(...ys), maxY = Math.max(...ys);
+  const spanY = maxY - minY || 1;
+  const d = points.map((p, i) => {
+    const x = ((p[0] - minX) / (maxX - minX || 1)) * width;
+    const y = height - ((p[1] - minY) / spanY) * height;
+    return `${i ? 'L' : 'M'}${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+  const area = `${d} L${width},${height} L0,${height} Z`;
+  return (
+    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="block">
+      <path d={area} fill={color} opacity="0.12" />
+      <path d={d} fill="none" stroke={color} strokeWidth="1.8" strokeLinejoin="round" />
+    </svg>
+  );
+}
 
-  const load = useCallback(async () => {
-    setLoading(true); setError('');
+// ── Token icon: IPFS logo → gradient letter avatar (GMGN style) ────────
+function ipfsToHttp(uri?: string | null): string | null {
+  if (!uri) return null;
+  if (uri.startsWith('ipfs://')) return `https://ipfs.io/ipfs/${uri.slice(7)}`;
+  if (uri.startsWith('https://')) return uri;
+  return null;
+}
+function TokenIcon({ src, symbol, size = 36 }: { src?: string | null; symbol: string; size?: number }) {
+  const [err, setErr] = useState(false);
+  const letter = (symbol || '?').slice(0, 1).toUpperCase();
+  const hue = [...(symbol || '?')].reduce((a, c) => a + c.charCodeAt(0), 0) % 360;
+  if (!src || err) {
+    return (
+      <div className="flex shrink-0 items-center justify-center rounded-full font-bold text-white" style={{ width: size, height: size, fontSize: size * 0.42, background: `linear-gradient(135deg, hsl(${hue} 70% 45%), hsl(${(hue + 40) % 360} 75% 30%))` }}>
+        {letter}
+      </div>
+    );
+  }
+  return <img src={src} alt={symbol} width={size} height={size} onError={() => setErr(true)} className="shrink-0 rounded-full object-cover" style={{ width: size, height: size }} />;
+}
+
+// ── Market data for a token (used by analysis drawer) ───────────────────
+interface SignalRow {
+  id: string; source: string; symbol: string; tokenAddress: string;
+  priceUsd: number | null; volume24hUsd: number | null; marketCapUsd: number | null;
+  athUsd: number | null; athDrawdownPct: number | null; liquidityUsd: number | null;
+  change5mPct: number | null; change1hPct: number | null; ageText: string | null;
+  holdersTotal: number | null; top10Pct: number | null;
+  smartBuys: number | null; smartSells: number | null; smartNetUsd: number | null; clusterBuyWallets: number | null;
+  rugScore: number | null; renounced: boolean; devHoldPct: number | null;
+  xHandle: string | null; xFollowers: number | null; narrative: string | null; signalAt: string;
+}
+
+function fmtUsd(v: number | null | undefined, digits = 2): string {
+  if (v == null) return '—';
+  if (Math.abs(v) >= 1_000_000) return `$${(v / 1_000_000).toFixed(2)}M`;
+  if (Math.abs(v) >= 1_000) return `$${(v / 1_000).toFixed(1)}K`;
+  return `$${v.toFixed(digits)}`;
+}
+function fmtPrice(v: number | null | undefined): string {
+  if (v == null) return '—';
+  if (v >= 1) return `$${v.toFixed(2)}`;
+  if (v >= 0.01) return `$${v.toFixed(4)}`;
+  // Trim to 4 significant decimals without scientific notation
+  const s = v.toFixed(Math.min(10, Math.max(6, -Math.floor(Math.log10(v)) + 3)));
+  return `$${s.replace(/0+$/, '').replace(/\.$/, '')}`;
+}
+function fmtPct(v: number | null | undefined): string {
+  if (v == null) return '—';
+  return `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`;
+}
+function pctColor(v: number | null | undefined): string {
+  if (v == null) return 'rgba(255,255,255,0.5)';
+  return v >= 0 ? '#86efac' : '#fca5a5';
+}
+
+// ── Launch record (feed) ────────────────────────────────────────────────
+interface LaunchRow {
+  name?: string; symbol?: string; token?: string; tier: string;
+  priceUsd?: number | null; marketCapUsd?: number | null; liquidityUsd?: number | null;
+  graduationProgressPct?: number | null; graduated?: boolean;
+  launchedAt?: string | null; description?: string | null; logo?: string | null;
+  deployer?: string | null; pool?: string | null; transactionHash?: string | null;
+}
+
+// ── Buy/sell preview (pure math via curve inputs) ───────────────────────
+function TradePreview({ launch, onClose }: { launch: LaunchRow; onClose: () => void }) {
+  const [side, setSide] = useState<'buy' | 'sell'>('buy');
+  const [amount, setAmount] = useState('0.1');
+  const [busy, setBusy] = useState(false);
+  const [quote, setQuote] = useState<{ tokensOut?: string | null; quoteOut?: string | null; feeEth?: string | null; priceImpactPct?: number | null; error?: string } | null>(null);
+
+  const runQuote = async () => {
+    setBusy(true); setQuote(null);
+    try {
+      // Real quote path: server-side curve math using live pair reserves is the
+      // MCP server's job; the browser shows the plan and hands off execution.
+      const res = await fetch('/api/launch-preview', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: launch.token, pool: launch.pool, side, amount }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'preview failed');
+      setQuote(data);
+    } catch (e: any) {
+      setQuote({ error: e?.message ?? 'preview failed' });
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)' }} onClick={onClose}>
+      <div className="w-full max-w-md rounded-t-2xl sm:rounded-2xl p-5" style={{ background: '#141414', border: '1px solid rgba(249,115,22,0.25)' }} onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-3">
+          <TokenIcon src={ipfsToHttp(launch.logo)} symbol={launch.symbol ?? '?'} size={40} />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-bold text-white">{launch.name ?? launch.symbol}</p>
+            <p className="font-mono text-[10px] text-white/35">{launch.token?.slice(0, 16)}…</p>
+          </div>
+          <button onClick={onClose} className="rounded-lg px-2 py-1 text-white/40 hover:text-white">✕</button>
+        </div>
+
+        <div className="mt-4 grid grid-cols-2 gap-1 rounded-xl p-1" style={{ background: 'rgba(0,0,0,0.35)' }}>
+          {(['buy', 'sell'] as const).map((s) => (
+            <button key={s} onClick={() => setSide(s)} className="rounded-lg py-2 text-xs font-bold uppercase tracking-wide" style={side === s ? (s === 'buy' ? { background: 'rgba(74,222,128,0.15)', color: '#86efac' } : { background: 'rgba(248,113,113,0.15)', color: '#fca5a5' }) : {}}>{s}</button>
+          ))}
+        </div>
+
+        <div className="mt-3 flex items-center gap-2 rounded-xl px-4 py-3" style={{ background: 'rgba(0,0,0,0.35)', border: '1px solid rgba(255,255,255,0.08)' }}>
+          <input value={amount} onChange={(e) => setAmount(e.target.value)} className="min-w-0 flex-1 bg-transparent font-mono text-lg text-white outline-none" placeholder="0.0" />
+          <span className="rounded-lg px-2.5 py-1 font-mono text-xs font-bold" style={{ background: 'rgba(249,115,22,0.15)', color: '#fdba74' }}>{side === 'buy' ? 'ETH' : (launch.symbol ?? 'TOKEN')}</span>
+        </div>
+
+        <button onClick={() => void runQuote()} disabled={busy} className="btn-primary mt-3 w-full rounded-xl py-3 text-sm font-bold disabled:opacity-50">
+          {busy ? 'Quoting curve…' : `Preview ${side}`}
+        </button>
+
+        {quote?.error && (
+          <p className="mt-3 rounded-lg px-3 py-2 text-xs" style={{ color: '#fca5a5', background: 'rgba(248,113,113,0.08)' }}>{quote.error}</p>
+        )}
+        {quote && !quote.error && (
+          <div className="mt-3 rounded-xl p-4" style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)' }}>
+            {side === 'buy' ? (
+              <>
+                <Row k="You receive" v={`${quote.tokensOut ? (Number(BigInt(quote.tokensOut)) / 1e18).toLocaleString('en-US', { maximumFractionDigits: 0 }) : '—'} ${launch.symbol ?? ''}`} accent />
+                <Row k="LP fee (0.3%)" v={`${quote.feeEth ?? '—'} ETH`} />
+                <Row k="Price impact" v={quote.priceImpactPct != null ? `${quote.priceImpactPct.toFixed(2)}%` : '—'} color={quote.priceImpactPct != null && quote.priceImpactPct > 5 ? '#fca5a5' : '#86efac'} />
+              </>
+            ) : (
+              <>
+                <Row k="You receive" v={`${quote.quoteOut ? (Number(BigInt(quote.quoteOut)) / 1e18).toFixed(6) : '—'} ETH`} accent />
+                <Row k="Price impact" v={quote.priceImpactPct != null ? `${quote.priceImpactPct.toFixed(2)}%` : '—'} color={quote.priceImpactPct != null && quote.priceImpactPct > 5 ? '#fca5a5' : '#86efac'} />
+              </>
+            )}
+            <div className="mt-3 flex items-start gap-2 rounded-lg p-3" style={{ background: 'rgba(74,222,128,0.06)', border: '1px solid rgba(74,222,128,0.18)' }}>
+              <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-green-400" />
+              <p className="text-[11px] leading-relaxed text-white/60">This is a <b className="text-white">preview</b>. Execution happens from your PonsMCP server with policy checks — this browser never signs. The curve quote is computed live, slippage applies at execution.</p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Row({ k, v, accent, color }: { k: string; v: string; accent?: boolean; color?: string }) {
+  return (
+    <div className="flex items-center justify-between py-1 text-xs">
+      <span className="text-white/40">{k}</span>
+      <span className="font-mono font-bold" style={{ color: color ?? (accent ? '#fdba74' : 'rgba(255,255,255,0.85)') }}>{v}</span>
+    </div>
+  );
+}
+
+// ── Analysis drawer for a signal token (GMGN-style breakdown) ───────────
+function SignalDrawer({ signal, onClose }: { signal: SignalRow; onClose: () => void }) {
+  const [chart, setChart] = useState<[number, number][] | null>(null);
+  const [chartErr, setChartErr] = useState(false);
+  const [chartRange, setChartRange] = useState<'1' | '7' | '30'>('1');
+
+  useEffect(() => {
+    let alive = true;
+    setChart(null); setChartErr(false);
+    (async () => {
+      try {
+        const res = await fetch(`/api/chart?coin=pons&days=${chartRange}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        if (alive) setChart((data.prices ?? []).map((p: [number, number]) => [p[0], p[1]] as [number, number]));
+      } catch { if (alive) setChartErr(true); }
+    })();
+    return () => { alive = false; };
+  }, [chartRange]);
+
+  const first = chart?.[0]?.[1] ?? 0;
+  const last = chart?.[chart.length - 1]?.[1] ?? 0;
+  const up = last >= first;
+  const riskFlags: string[] = [];
+  if (signal.top10Pct != null && signal.top10Pct > 70) riskFlags.push(`Top 10 holders control ${signal.top10Pct.toFixed(0)}% of supply`);
+  if (signal.rugScore != null && signal.rugScore > 50) riskFlags.push(`Rug risk score ${signal.rugScore.toFixed(0)}/100`);
+  if (signal.renounced === false) riskFlags.push('Ownership not renounced');
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)' }} onClick={onClose}>
+      <div className="max-h-[88vh] w-full max-w-lg overflow-y-auto rounded-t-2xl sm:rounded-2xl" style={{ background: '#141414', border: '1px solid rgba(249,115,22,0.25)' }} onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div className="sticky top-0 z-10 flex items-center gap-3 px-5 py-4" style={{ background: 'rgba(20,20,20,0.95)', backdropFilter: 'blur(8px)', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+          <TokenIcon symbol={signal.symbol} size={40} />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <p className="text-base font-bold text-white">{signal.symbol}</p>
+              <span className="rounded-full px-2 py-0.5 font-mono text-[9px] font-bold" style={{ background: signal.source === 'GRADE A' ? 'rgba(249,115,22,0.14)' : 'rgba(96,165,250,0.12)', color: signal.source === 'GRADE A' ? '#fdba74' : '#93c5fd' }}>{signal.source}</span>
+            </div>
+            <p className="font-mono text-[10px] text-white/35">{signal.tokenAddress.slice(0, 12)}…{signal.tokenAddress.slice(-6)}</p>
+          </div>
+          <button onClick={onClose} className="rounded-lg px-2 py-1 text-white/40 hover:text-white">✕</button>
+        </div>
+
+        <div className="space-y-4 p-5">
+          {/* Chart */}
+          <div className="rounded-xl p-3" style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)' }}>
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-xs font-bold text-white/70">PONS reference chart · CoinGecko</p>
+              <div className="flex gap-1">
+                {(['1', '7', '30'] as const).map((d) => (
+                  <button key={d} onClick={() => setChartRange(d)} className="rounded px-2 py-0.5 font-mono text-[10px]" style={chartRange === d ? { background: 'rgba(249,115,22,0.2)', color: '#fdba74' } : { color: 'rgba(255,255,255,0.35)' }}>{d}D</button>
+                ))}
+              </div>
+            </div>
+            {chartErr && <p className="py-6 text-center text-xs text-white/30">Chart unavailable right now</p>}
+            {!chartErr && !chart && <div className="py-8 text-center font-mono text-xs text-white/30">Loading chart…</div>}
+            {chart && chart.length > 2 && (
+              <>
+                <Sparkline points={chart} width={420} height={90} color={up ? '#4ade80' : '#f87171'} />
+                <div className="mt-1 flex justify-between font-mono text-[10px]" style={{ color: pctColor(last - first) }}>
+                  <span>{fmtPrice(first)}</span>
+                  <span>{up ? '▲' : '▼'} {fmtPct(first ? ((last - first) / first) * 100 : 0)}</span>
+                  <span>{fmtPrice(last)}</span>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Market */}
+          <Section title="MARKET">
+            <Grid>
+              <Cell k="Price" v={fmtPrice(signal.priceUsd)} accent />
+              <Cell k="Market cap" v={fmtUsd(signal.marketCapUsd)} />
+              <Cell k="ATH" v={signal.athUsd != null ? `${fmtUsd(signal.athUsd)} (${fmtPct(signal.athDrawdownPct)})` : '—'} />
+              <Cell k="Liquidity" v={fmtUsd(signal.liquidityUsd)} />
+              <Cell k="24h volume" v={fmtUsd(signal.volume24hUsd)} />
+              <Cell k="Age" v={signal.ageText ?? '—'} />
+              <Cell k="1h change" v={fmtPct(signal.change1hPct)} color={pctColor(signal.change1hPct)} />
+              <Cell k="5m change" v={fmtPct(signal.change5mPct)} color={pctColor(signal.change5mPct)} />
+            </Grid>
+          </Section>
+
+          {/* Holders */}
+          <Section title="HOLDERS">
+            <Grid>
+              <Cell k="Total holders" v={signal.holdersTotal?.toLocaleString() ?? '—'} />
+              <Cell k="Top 10 share" v={signal.top10Pct != null ? `${signal.top10Pct.toFixed(0)}%${signal.top10Pct > 70 ? ' ⚠️' : ''}` : '—'} color={signal.top10Pct != null && signal.top10Pct > 70 ? '#fca5a5' : undefined} />
+              <Cell k="Dev holding" v={signal.devHoldPct != null ? `${signal.devHoldPct.toFixed(0)}%` : '—'} />
+            </Grid>
+          </Section>
+
+          {/* Smart money */}
+          {(signal.smartBuys != null || signal.clusterBuyWallets != null) && (
+            <Section title="SMART MONEY">
+              <Grid>
+                <Cell k="Buys / sells" v={signal.smartBuys != null ? `🟢 ${signal.smartBuys} / 🔴 ${signal.smartSells ?? 0}` : '—'} />
+                <Cell k="Net flow" v={signal.smartNetUsd != null ? `${signal.smartNetUsd >= 0 ? '+' : ''}${fmtUsd(signal.smartNetUsd)}` : '—'} color={pctColor(signal.smartNetUsd)} />
+                <Cell k="Buy cluster" v={signal.clusterBuyWallets != null ? `${signal.clusterBuyWallets} wallets` : '—'} />
+              </Grid>
+            </Section>
+          )}
+
+          {/* Risk */}
+          <Section title="RISK">
+            <Grid>
+              <Cell k="Rug score" v={signal.rugScore != null ? `${signal.rugScore.toFixed(0)}/100` : '—'} color={signal.rugScore != null && signal.rugScore > 50 ? '#fca5a5' : '#86efac'} />
+              <Cell k="Renounced" v={signal.renounced ? '✅ Yes' : '❌ No'} color={signal.renounced ? '#86efac' : '#fca5a5'} />
+            </Grid>
+            {riskFlags.map((f) => (
+              <p key={f} className="mt-2 rounded-lg px-3 py-2 text-[11px]" style={{ color: '#fca5a5', background: 'rgba(248,113,113,0.07)' }}>⚠ {f}</p>
+            ))}
+          </Section>
+
+          {/* Social + narrative */}
+          {(signal.xHandle || signal.narrative) && (
+            <Section title="CONTEXT">
+              {signal.xHandle && (
+                <p className="text-xs text-white/55">X: <a href={`https://x.com/${signal.xHandle}`} target="_blank" rel="noopener noreferrer" className="font-mono text-[#f97316]">@{signal.xHandle}</a>{signal.xFollowers != null ? ` · ${signal.xFollowers.toLocaleString()} followers` : ''}</p>
+              )}
+              {signal.narrative && <p className="mt-1 text-xs italic text-white/45">“{signal.narrative}”</p>}
+            </Section>
+          )}
+
+          {/* Links */}
+          <div className="flex flex-wrap gap-2 pt-1">
+            <a href={`https://robinhoodchain.blockscout.com/token/${signal.tokenAddress}`} target="_blank" rel="noopener noreferrer" className="btn-secondary inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-bold text-[#fed7aa]">
+              Blockscout <ExternalLink className="h-3 w-3" />
+            </a>
+            <a href={`https://dexscreener.com/robinhood/${signal.tokenAddress}`} target="_blank" rel="noopener noreferrer" className="btn-secondary inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-bold text-[#fed7aa]">
+              DexScreener <ExternalLink className="h-3 w-3" />
+            </a>
+            <button onClick={() => { navigator.clipboard?.writeText(signal.tokenAddress); }} className="btn-secondary rounded-full px-3.5 py-2 text-xs font-bold text-[#fed7aa]">Copy CA</button>
+          </div>
+          <p className="font-mono text-[9px] text-white/25">Signal captured {signal.signalAt} · via live notifier pipeline</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[#fdba74]">{title}</p>
+      {children}
+    </div>
+  );
+}
+function Grid({ children }: { children: React.ReactNode }) {
+  return <div className="grid grid-cols-2 gap-x-4 gap-y-1 rounded-xl p-3" style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)' }}>{children}</div>;
+}
+function Cell({ k, v, color, accent }: { k: string; v: string; color?: string; accent?: boolean }) {
+  return (
+    <div className="flex items-center justify-between gap-2 py-0.5">
+      <span className="text-[11px] text-white/40">{k}</span>
+      <span className="font-mono text-xs font-bold" style={{ color: color ?? (accent ? '#fdba74' : 'rgba(255,255,255,0.85)') }}>{v}</span>
+    </div>
+  );
+}
+
+// ── Main Market Intel panel ─────────────────────────────────────────────
+function LaunchIntelPanel() {
+  const [subTab, setSubTab] = useState<'signals' | 'launches'>('signals');
+  const [sourceFilter, setSourceFilter] = useState<'ALL' | 'GRADE A' | 'EARLY WATCH'>('ALL');
+  const [signals, setSignals] = useState<SignalRow[] | null>(null);
+  const [signalsErr, setSignalsErr] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [launches, setLaunches] = useState<{ total: number; summary: Record<string, number>; launches: LaunchRow[] } | null>(null);
+  const [launchesErr, setLaunchesErr] = useState('');
+  const [launchesLoading, setLaunchesLoading] = useState(true);
+  const [selected, setSelected] = useState<SignalRow | null>(null);
+  const [selectedLaunch, setSelectedLaunch] = useState<LaunchRow | null>(null);
+  const [tradeLaunch, setTradeLaunch] = useState<LaunchRow | null>(null);
+
+  const loadSignals = useCallback(async () => {
+    setLoading(true); setSignalsErr('');
+    try {
+      const q = sourceFilter === 'ALL' ? '' : `&source=${encodeURIComponent(sourceFilter)}`;
+      const res = await fetch(`/api/signals?limit=60${q}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'failed');
+      setSignals(data.signals);
+    } catch (e: any) { setSignalsErr(e?.message ?? 'Could not load signals'); }
+    finally { setLoading(false); }
+  }, [sourceFilter]);
+
+  const loadLaunches = useCallback(async () => {
+    setLaunchesLoading(true); setLaunchesErr('');
     try {
       const res = await fetch('/api/launches');
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? 'ranking failed');
-      setRanking(data);
-    } catch (e: any) {
-      setError(e?.message ?? 'Could not load launch data');
-    } finally { setLoading(false); }
+      if (!res.ok) throw new Error(data.error ?? 'failed');
+      setLaunches(data);
+    } catch (e: any) { setLaunchesErr(e?.message ?? 'Could not load launches'); }
+    finally { setLaunchesLoading(false); }
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => { if (subTab === 'signals') void loadSignals(); }, [subTab, loadSignals]);
+  useEffect(() => { if (subTab === 'launches') void loadLaunches(); }, [subTab, loadLaunches]);
 
   const tierColor = (tier: string) =>
     tier === 'Graduated' ? { bg: 'rgba(74,222,128,0.12)', fg: '#86efac' }
@@ -140,57 +488,164 @@ function LaunchIntelPanel() {
 
   return (
     <div className="grid gap-5">
-      <Card title="Launch intelligence" subtitle="Live pons v1 launch feed, screened with the Grade A / Early Watch logic.">
-        <div className="p-5">
-          {loading && (
-            <div>
-              <div className="relative h-1.5 overflow-hidden rounded-full bg-white/10">
-                <div className="absolute inset-y-0 w-1/3 rounded-full bg-gradient-to-r from-transparent via-[#f97316] to-transparent animate-scan-sweep" />
-              </div>
-              <p className="mt-3 font-mono text-xs text-white/45">Screening launch feed...</p>
+      {/* Sub tabs */}
+      <div className="grid grid-cols-2 gap-1 rounded-xl p-1" style={{ background: 'rgba(16,16,16,0.62)', border: '1px solid rgba(255,255,255,0.1)' }}>
+        {(['signals', 'launches'] as const).map((s) => (
+          <button key={s} onClick={() => setSubTab(s)} className="rounded-lg py-2 text-xs font-bold uppercase tracking-wide" style={subTab === s ? { background: 'rgba(249,115,22,0.18)', color: '#fdba74' } : { color: 'rgba(255,255,255,0.4)' }}>
+            {s === 'signals' ? 'Live signals' : 'Launch feed'}
+          </button>
+        ))}
+      </div>
+
+      {/* ============ SIGNALS ============ */}
+      {subTab === 'signals' && (
+        <Card title="Market intelligence" subtitle="Live Grade A / Early Watch signals from the always-on notifier pipeline — click any row for full analysis.">
+          <div className="p-5">
+            <div className="mb-4 flex flex-wrap gap-2">
+              {(['ALL', 'GRADE A', 'EARLY WATCH'] as const).map((f) => (
+                <button key={f} onClick={() => setSourceFilter(f)} className="rounded-full px-3 py-1 font-mono text-[11px] font-bold" style={sourceFilter === f ? { background: 'rgba(249,115,22,0.2)', color: '#fdba74' } : { background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.4)' }}>{f}</button>
+              ))}
+              <button onClick={() => void loadSignals()} className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-white/10 px-3 py-1 text-xs text-white/60 hover:text-white"><RefreshCw className="h-3 w-3" /> Refresh</button>
             </div>
-          )}
-          {error && (
-            <div className="rounded-lg px-4 py-3 text-sm" style={{ color: '#fca5a5', background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)' }}>
-              {error}
-              <button onClick={() => void load()} className="ml-3 text-xs font-bold text-[#f97316] underline">Retry</button>
-            </div>
-          )}
-          {ranking && !loading && (
-            <>
-              <div className="mb-4 flex flex-wrap gap-2">
-                {Object.entries(ranking.summary).map(([tier, count]) => (
-                  <span key={tier} className="rounded-full px-3 py-1 font-mono text-[11px] font-bold" style={{ background: tierColor(tier).bg, color: tierColor(tier).fg }}>
-                    {count} {tier}
-                  </span>
-                ))}
-                <button onClick={() => void load()} className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-white/10 px-3 py-1 text-xs text-white/60 hover:text-white"><RefreshCw className="h-3 w-3" /> Refresh</button>
+
+            {loading && <div className="relative h-1.5 overflow-hidden rounded-full bg-white/10"><div className="absolute inset-y-0 w-1/3 rounded-full bg-gradient-to-r from-transparent via-[#f97316] to-transparent animate-scan-sweep" /></div>}
+            {signalsErr && (
+              <div className="rounded-lg px-4 py-3 text-sm" style={{ color: '#fca5a5', background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)' }}>
+                {signalsErr} <button onClick={() => void loadSignals()} className="ml-2 text-xs font-bold text-[#f97316] underline">Retry</button>
               </div>
+            )}
+            {signals && signals.length === 0 && <p className="py-6 text-center text-sm text-white/35">No signals captured yet for this filter.</p>}
+            {signals && signals.length > 0 && (
               <div className="overflow-hidden rounded-xl border border-white/10">
-                <div className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-3 px-4 py-2 font-mono text-[10px] uppercase tracking-wide text-white/30" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(0,0,0,0.25)' }}>
-                  <span>Launch</span><span className="text-right">Price</span><span className="text-right">Grad</span><span className="text-right">Tier</span>
+                <div className="hidden grid-cols-[2.2fr_1fr_0.9fr_1fr_1.1fr_auto] items-center gap-3 px-4 py-2 font-mono text-[10px] uppercase tracking-wide text-white/30 sm:grid" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(0,0,0,0.25)' }}>
+                  <span>Token</span><span className="text-right">MC</span><span className="text-right">ATH dd</span><span className="text-right">Liq</span><span className="text-right">Holders</span><span>Signal</span>
                 </div>
                 <div className="divide-y" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
-                  {ranking.launches.map((l, i) => (
-                    <div key={l.token ?? i} className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-3 px-4 py-2.5">
-                      <div className="min-w-0">
-                        <p className="truncate text-xs font-bold text-white">{l.name ?? l.symbol ?? 'unnamed'}</p>
-                        <p className="truncate font-mono text-[9px] text-white/30">{l.token?.slice(0, 14)}...</p>
+                  {signals.map((s) => (
+                    <button key={s.id} onClick={() => setSelected(s)} className="grid w-full grid-cols-2 items-center gap-3 px-4 py-3 text-left transition hover:bg-white/[0.04] sm:grid-cols-[2.2fr_1fr_0.9fr_1fr_1.1fr_auto]">
+                      <div className="flex min-w-0 items-center gap-2.5">
+                        <TokenIcon symbol={s.symbol} size={30} />
+                        <div className="min-w-0">
+                          <p className="truncate text-xs font-bold text-white">{s.symbol}</p>
+                          <p className="truncate font-mono text-[9px] text-white/30">{fmtPrice(s.priceUsd)} · {s.ageText ?? '—'}</p>
+                        </div>
                       </div>
-                      <span className="text-right font-mono text-[11px] text-white/70">{l.priceUsd != null ? (l.priceUsd < 0.01 ? '$' + l.priceUsd.toExponential(1) : '$' + l.priceUsd.toFixed(4)) : '-'}</span>
-                      <span className="text-right font-mono text-[11px] text-white/70">{l.graduationProgressPct != null ? Math.round(l.graduationProgressPct) + '%' : l.graduated ? '100%' : '-'}</span>
-                      <span className="rounded-full px-2 py-0.5 text-right font-mono text-[9px] font-bold" style={{ background: tierColor(l.tier).bg, color: tierColor(l.tier).fg }}>{l.tier}</span>
-                    </div>
+                      <span className="text-right font-mono text-[11px] text-white/70">{fmtUsd(s.marketCapUsd)}</span>
+                      <span className="hidden text-right font-mono text-[11px] sm:block" style={{ color: pctColor(s.athDrawdownPct) }}>{s.athDrawdownPct != null ? `${s.athDrawdownPct.toFixed(0)}%` : '—'}</span>
+                      <span className="hidden text-right font-mono text-[11px] text-white/70 sm:block">{fmtUsd(s.liquidityUsd)}</span>
+                      <span className="hidden text-right font-mono text-[11px] text-white/70 sm:block">{s.holdersTotal?.toLocaleString() ?? '—'}</span>
+                      <span className="justify-self-end rounded-full px-2 py-0.5 font-mono text-[9px] font-bold" style={{ background: s.source === 'GRADE A' ? 'rgba(249,115,22,0.14)' : 'rgba(96,165,250,0.12)', color: s.source === 'GRADE A' ? '#fdba74' : '#93c5fd' }}>{s.source === 'GRADE A' ? 'A' : 'EW'}</span>
+                    </button>
                   ))}
                 </div>
               </div>
-              <p className="mt-3 text-[10px] leading-relaxed text-white/30">
-                Screening tiers mirror the notifier logic: Grade A = liquidity over $500 with real graduation progress; Early Watch = trading but pre-graduation. Data from the official pons launch feed.
-              </p>
-            </>
-          )}
+            )}
+            <p className="mt-3 text-[10px] leading-relaxed text-white/30">
+              Sourced from the live Telegram notifier watching Grade [A] and Early Watch channels — the same feed used for manual screening. Every field (MC, ATH, holders, smart money, rug score) is parsed from real-time signal messages, never fabricated.
+            </p>
+          </div>
+        </Card>
+      )}
+
+      {/* ============ LAUNCHES ============ */}
+      {subTab === 'launches' && (
+        <Card title="Launch feed" subtitle="Every pons launch is viewable — including Low Signal. Click a row for full analysis, or Preview to run a buy/sell quote.">
+          <div className="p-5">
+            {launchesLoading && <div className="relative h-1.5 overflow-hidden rounded-full bg-white/10"><div className="absolute inset-y-0 w-1/3 rounded-full bg-gradient-to-r from-transparent via-[#f97316] to-transparent animate-scan-sweep" /></div>}
+            {launchesErr && (
+              <div className="rounded-lg px-4 py-3 text-sm" style={{ color: '#fca5a5', background: 'rgba(248,113,113,0.08)' }}>
+                {launchesErr} <button onClick={() => void loadLaunches()} className="ml-2 text-xs font-bold text-[#f97316] underline">Retry</button>
+              </div>
+            )}
+            {launches && (
+              <>
+                <div className="mb-4 flex flex-wrap gap-2">
+                  {Object.entries(launches.summary).map(([tier, count]) => (
+                    <span key={tier} className="rounded-full px-3 py-1 font-mono text-[11px] font-bold" style={{ background: tierColor(tier).bg, color: tierColor(tier).fg }}>{count} {tier}</span>
+                  ))}
+                  <button onClick={() => void loadLaunches()} className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-white/10 px-3 py-1 text-xs text-white/60 hover:text-white"><RefreshCw className="h-3 w-3" /> Refresh</button>
+                </div>
+                <div className="overflow-hidden rounded-xl border border-white/10">
+                  <div className="divide-y" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+                    {launches.launches.map((l, i) => (
+                      <div key={l.token ?? i} className="flex items-center gap-3 px-4 py-3 transition hover:bg-white/[0.03]">
+                        <button onClick={() => setSelectedLaunch(l)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+                          <TokenIcon src={ipfsToHttp(l.logo)} symbol={l.symbol ?? '?'} size={34} />
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-xs font-bold text-white">{l.name ?? l.symbol ?? 'unnamed'}</p>
+                            <p className="truncate font-mono text-[9px] text-white/30">{l.priceUsd != null ? fmtPrice(l.priceUsd) : '—'} · MC {fmtUsd(l.marketCapUsd)} · grad {l.graduationProgressPct != null ? `${Math.round(l.graduationProgressPct)}%` : l.graduated ? '100%' : '—'}</p>
+                          </div>
+                          <span className="hidden shrink-0 rounded-full px-2 py-0.5 font-mono text-[9px] font-bold sm:block" style={{ background: tierColor(l.tier).bg, color: tierColor(l.tier).fg }}>{l.tier}</span>
+                        </button>
+                        <button onClick={() => setTradeLaunch(l)} className="shrink-0 rounded-full border border-[#f97316]/40 px-3 py-1.5 text-[10px] font-bold text-[#fdba74] transition hover:bg-[#f97316]/10">
+                          Trade
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </Card>
+      )}
+
+      {selected && <SignalDrawer signal={selected} onClose={() => setSelected(null)} />}
+      {selectedLaunch && <LaunchDrawer launch={selectedLaunch} onClose={() => setSelectedLaunch(null)} />}
+      {tradeLaunch && <TradePreview launch={tradeLaunch} onClose={() => setTradeLaunch(null)} />}
+    </div>
+  );
+}
+
+// ── Launch analysis drawer (feed tokens: MC, grad, deployer, tx) ────────
+function LaunchDrawer({ launch, onClose }: { launch: LaunchRow; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)' }} onClick={onClose}>
+      <div className="max-h-[88vh] w-full max-w-lg overflow-y-auto rounded-t-2xl sm:rounded-2xl" style={{ background: '#141414', border: '1px solid rgba(249,115,22,0.25)' }} onClick={(e) => e.stopPropagation()}>
+        <div className="sticky top-0 z-10 flex items-center gap-3 px-5 py-4" style={{ background: 'rgba(20,20,20,0.95)', backdropFilter: 'blur(8px)', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+          <TokenIcon src={ipfsToHttp(launch.logo)} symbol={launch.symbol ?? '?'} size={40} />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <p className="text-base font-bold text-white">{launch.name ?? launch.symbol ?? 'unnamed'}</p>
+              <span className="rounded-full px-2 py-0.5 font-mono text-[9px] font-bold" style={{ background: launch.tier === 'Graduated' ? 'rgba(74,222,128,0.12)' : 'rgba(255,255,255,0.06)', color: launch.tier === 'Graduated' ? '#86efac' : 'rgba(255,255,255,0.4)' }}>{launch.tier}</span>
+            </div>
+            <p className="font-mono text-[10px] text-white/35">{launch.token?.slice(0, 12)}…</p>
+          </div>
+          <button onClick={onClose} className="rounded-lg px-2 py-1 text-white/40 hover:text-white">✕</button>
         </div>
-      </Card>
+        <div className="space-y-4 p-5">
+          <Section title="MARKET">
+            <Grid>
+              <Cell k="Price" v={fmtPrice(launch.priceUsd)} accent />
+              <Cell k="Market cap" v={fmtUsd(launch.marketCapUsd)} />
+              <Cell k="Liquidity" v={fmtUsd(launch.liquidityUsd)} />
+              <Cell k="Graduation" v={launch.graduationProgressPct != null ? `${Math.round(launch.graduationProgressPct)}%` : launch.graduated ? '100%' : '—'} />
+            </Grid>
+          </Section>
+          {launch.description && (
+            <Section title="ABOUT">
+              <p className="text-xs leading-relaxed text-white/55">{launch.description}</p>
+            </Section>
+          )}
+          <Section title="ON-CHAIN">
+            <Grid>
+              <Cell k="Deployer" v={launch.deployer ? `${launch.deployer.slice(0, 8)}…${launch.deployer.slice(-4)}` : '—'} />
+              <Cell k="Pool" v={launch.pool ? `${launch.pool.slice(0, 8)}…` : '—'} />
+              <Cell k="Launched" v={launch.launchedAt ? new Date(launch.launchedAt).toLocaleDateString() : '—'} />
+            </Grid>
+          </Section>
+          <div className="flex flex-wrap gap-2 pt-1">
+            {launch.token && (
+              <>
+                <a href={`https://robinhoodchain.blockscout.com/token/${launch.token}`} target="_blank" rel="noopener noreferrer" className="btn-secondary inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-bold text-[#fed7aa]">Blockscout <ExternalLink className="h-3 w-3" /></a>
+                <a href={`https://dexscreener.com/robinhood/${launch.token}`} target="_blank" rel="noopener noreferrer" className="btn-secondary inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-bold text-[#fed7aa]">DexScreener <ExternalLink className="h-3 w-3" /></a>
+                <button onClick={() => navigator.clipboard?.writeText(launch.token!)} className="btn-secondary rounded-full px-3.5 py-2 text-xs font-bold text-[#fed7aa]">Copy CA</button>
+              </>
+            )}
+          </div>
+          <p className="font-mono text-[9px] text-white/25">Read-only intelligence. Execution stays in your PonsMCP server.</p>
+        </div>
+      </div>
     </div>
   );
 }
