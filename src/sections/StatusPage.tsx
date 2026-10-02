@@ -39,13 +39,9 @@ export function StatusPage() {
     const set = (name: string, patch: Partial<Check>) =>
       setChecks((prev) => prev.map((c) => (c.name === name ? { ...c, ...patch } : c)));
 
-    // 1. Intents API — real POST, expect a JSON intent (costs nothing, D1 write)
+    // 1. Intents API — read-only GET (no D1 writes from status viewers)
     {
-      const r = await timeFetch('/api/intents', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ merchant_address: '0x0000000000000000000000000000000000000001', amount_usdg: '0.010000' }),
-      });
+      const r = await timeFetch('/api/intents?limit=1');
       set('Payment intents API', { status: r.ok ? 'operational' : 'down', latencyMs: r.ms });
     }
 
