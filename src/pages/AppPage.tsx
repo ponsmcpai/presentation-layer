@@ -129,22 +129,39 @@ function Sparkline({ points, width = 260, height = 64, color = '#f97316' }: { po
 // ── Token icon: IPFS logo → gradient letter avatar (GMGN style) ────────
 function ipfsToHttp(uri?: string | null): string | null {
   if (!uri) return null;
-  if (uri.startsWith('ipfs://')) return `https://ipfs.io/ipfs/${uri.slice(7)}`;
-  if (uri.startsWith('https://')) return uri;
+  // Route through same-origin proxy — site CSP (img-src 'self') blocks direct
+  // IPFS/pinata image loads, so /api/logo fetches server-side and caches.
+  if (uri.startsWith('ipfs://')) return `/api/logo?url=${encodeURIComponent('https://flap.mypinata.cloud/ipfs/' + uri.slice(7))}`;
+  if (uri.startsWith('https://')) return `/api/logo?url=${encodeURIComponent(uri)}`;
   return null;
 }
+const logoCache = new Map<string, boolean>();
 function TokenIcon({ src, symbol, size = 36 }: { src?: string | null; symbol: string; size?: number }) {
-  const [err, setErr] = useState(false);
+  const [err, setErr] = useState(() => (src ? logoCache.get(src) === false : false));
+  const [loaded, setLoaded] = useState(() => (src ? logoCache.get(src) === true : false));
   const letter = (symbol || '?').slice(0, 1).toUpperCase();
   const hue = [...(symbol || '?')].reduce((a, c) => a + c.charCodeAt(0), 0) % 360;
-  if (!src || err) {
-    return (
-      <div className="flex shrink-0 items-center justify-center rounded-full font-bold text-white" style={{ width: size, height: size, fontSize: size * 0.42, background: `linear-gradient(135deg, hsl(${hue} 70% 45%), hsl(${(hue + 40) % 360} 75% 30%))` }}>
-        {letter}
-      </div>
-    );
-  }
-  return <img src={src} alt={symbol} width={size} height={size} onError={() => setErr(true)} className="shrink-0 rounded-full object-cover" style={{ width: size, height: size }} />;
+  const fallback = (
+    <div className="flex shrink-0 items-center justify-center rounded-full font-bold text-white" style={{ width: size, height: size, fontSize: size * 0.42, background: `linear-gradient(135deg, hsl(${hue} 70% 45%), hsl(${(hue + 40) % 360} 75% 30%))` }}>
+      {letter}
+    </div>
+  );
+  if (!src || err) return fallback;
+  return (
+    <div className="relative shrink-0" style={{ width: size, height: size }}>
+      {!loaded && <div className="absolute inset-0">{fallback}</div>}
+      <img
+        src={src}
+        alt={symbol}
+        width={size}
+        height={size}
+        onLoad={() => { logoCache.set(src, true); setLoaded(true); }}
+        onError={() => { logoCache.set(src, false); setErr(true); }}
+        className="rounded-full object-cover"
+        style={{ width: size, height: size, opacity: loaded ? 1 : 0 }}
+      />
+    </div>
+  );
 }
 
 // ── Market data for a token (used by analysis drawer) ───────────────────
