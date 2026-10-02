@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   Activity, ArrowRight, Boxes, Check, CheckCircle2, CircleDollarSign, Copy,
   ExternalLink, FileCheck2, Gauge, Loader2, Menu, Network, Receipt, RefreshCw,
-  ShieldCheck, X,
+  Settings, ShieldCheck, X,
 } from 'lucide-react';
 
 const USDG = '0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168';
@@ -29,7 +29,7 @@ type Quote = {
   amount: number;
   amountBase: string;
   createdAt: string;
-  protectedResource: string;
+  protectedResource: string | null;
   verifyEndpoint: string;
 };
 
@@ -50,6 +50,7 @@ const NAV = [
   { group: 'DEVELOPER', items: [
     { key: 'Integration', icon: Network },
     { key: 'Policy', icon: Gauge },
+    { key: 'Settings', icon: Settings },
   ] },
 ] as const;
 
@@ -210,6 +211,18 @@ export function AppPage() {
     arguments: { payTo: quote.merchant, amountUsd: quote.amount.toFixed(2) },
   }, null, 2) : '';
 
+  const settingsSnippet = [
+    '# PonsMCP agent runtime — required environment',
+    'PONSMCP_PRIVATE_KEY=<your 32-byte hex key, generated offline>',
+    '',
+    '# Spending policy (defaults shown)',
+    'PONSMCP_MAX_PER_TX=100000000    # 100 USDG per transaction (base units)',
+    'PONSMCP_DAILY_LIMIT=1000000000  # 1,000 USDG per day (base units)',
+    '',
+    '# Optional: pons launch intel via Alchemy',
+    '# PONSMCP_ALCHEMY_KEY=<key>',
+  ].join('\n');
+
   const paidCount = history.filter((i) => i.status === 'paid').length;
   const pendingCount = history.filter((i) => i.status === 'pending').length;
 
@@ -300,7 +313,7 @@ export function AppPage() {
               ['$MCP token', 'Unannounced', 'No market data until launch'],
               ['Latest block', live.block, 'Robinhood Chain · 4663'],
               ['Network gas', live.gas, 'Gas token: ETH'],
-              ['MCP tools', '14 ready', 'Reads · payments · proofs'],
+              ['MCP tools', '17 ready', 'Reads · payments · proofs'],
             ].map(([label, value, sub]) => (
               <div key={label} className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-4">
                 <p className="text-[11px] text-white/40">{label}</p>
@@ -439,7 +452,7 @@ export function AppPage() {
                   </div>
                   <div className="flex flex-wrap items-center gap-4">
                     <a href={`${RH_EXPLORER}/tx/${receipt.hash}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#f97316]">View proof <ExternalLink className="h-3.5 w-3.5" /></a>
-                    {quote && receipt.status === 'success' && <a href={quote.protectedResource} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#86efac]">Open unlocked resource <ExternalLink className="h-3.5 w-3.5" /></a>}
+                    {quote && receipt.status === 'success' && quote.protectedResource && <a href={quote.protectedResource} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#86efac]">Open unlocked resource <ExternalLink className="h-3.5 w-3.5" /></a>}
                   </div>
                 </div>
               )}
@@ -576,6 +589,33 @@ export function AppPage() {
                   ))}
                 </div>
                 <p className="mt-4">Balance is pre-checked: an underfunded wallet never reaches broadcast. A payment counts as complete only when the receipt is <span className="font-mono text-[#fdba74]">0x1</span> with the expected USDG Transfer event. The daily counter is in-process; operators who need durable budgets should run one server per agent and restart on schedule.</p>
+              </div>
+            </Card>
+          )}
+
+          {/* ============ TAB: SETTINGS ============ */}
+          {tab === 'Settings' && (
+            <Card title="Server settings" subtitle="Your PonsMCP server is the account — configure it once, key never leaves the runtime.">
+              <div className="flex flex-col gap-4 p-5">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-xl p-4" style={{ background: 'rgba(255,255,255,0.04)' }}>
+                    <p className="text-xs text-white/40">RPC endpoint (agent → chain)</p>
+                    <p className="mt-1 font-mono text-xs break-all text-white/80">https://rpc.mainnet.chain.robinhood.com</p>
+                  </div>
+                  <div className="rounded-xl p-4" style={{ background: 'rgba(255,255,255,0.04)' }}>
+                    <p className="text-xs text-white/40">Settlement console API (this origin)</p>
+                    <p className="mt-1 font-mono text-xs break-all text-white/80">https://ponsmcp.com/api</p>
+                  </div>
+                </div>
+                <p className="text-sm font-semibold text-white">Runtime configuration</p>
+                <div className="relative rounded-xl p-4" style={{ background: 'rgba(0,0,0,0.38)', border: '1px solid rgba(255,255,255,0.09)' }}>
+                  <div className="absolute right-2 top-2"><CopyButton value={settingsSnippet} /></div>
+                  <pre className="overflow-x-auto pr-8 font-mono text-xs" style={{ color: '#f97316' }}>{settingsSnippet}</pre>
+                </div>
+                <p className="text-xs leading-relaxed text-white/45">
+                  Paste into the environment of the process that runs <span className="font-mono text-white/70">ponsmcp</span>. The private key is generated by you — this browser never sees it, receives it, or signs with it. Generate a fresh key with: <span className="font-mono text-white/70">node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"</span> (run it offline, then fund only what the agent is allowed to spend).
+                </p>
+                <div className="flex items-center gap-2 text-xs text-white/45"><ShieldCheck className="h-4 w-4 text-green-400" /> No cookies, no sessions, no account database — possession of the key in your runtime is the whole access model.</div>
               </div>
             </Card>
           )}

@@ -19,7 +19,7 @@ export async function onRequestGet({ request, params, env }) {
     const amount = row ? row.amount_usdg_display : service.price_usdg_display;
     return json({
       error: 'PAYMENT-REQUIRED',
-      message: `This resource costs ${service.price_usdg_display} USDG to ${service.merchant}.`,
+      message: `This resource costs ${service.price_usdg_display} USDG to ${service.merchant_address}.`,
       service: { id: service.id, name: service.name, merchant: service.merchant_address, price_usdg: service.price_usdg_display },
       intent: row ? publicIntent(row) : null,
       create_intent: { amount_usdg: service.price_usdg_display, merchant_address: service.merchant_address, service_id: service.id },

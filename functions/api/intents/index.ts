@@ -24,7 +24,8 @@ export async function onRequestPost({ request, env }) {
       'INSERT INTO payment_intents (id, merchant_address, amount_usdg_base, amount_usdg_display, status, created_at, service_id) VALUES (?, ?, ?, ?, ?, ?, ?)'
     ).bind(id, merchant.toLowerCase(), micro.toString(), display, 'pending', createdAt, serviceId).run();
     const row = await env.ponsmcp_payments.prepare('SELECT * FROM payment_intents WHERE id = ?').bind(id).first();
-    const resource = row.service_id ? `/api/merchant/r/${row.service_id}?intent=${id}` : `/api/merchant/premium?intent=${id}`;
+    // Service-less intents have no unlockable resource yet — null, not the retired premium path.
+    const resource = row.service_id ? `/api/merchant/r/${row.service_id}?intent=${id}` : null;
     return json({ intent: publicIntent(row), next: { verify: `/api/intents/${id}/verify`, protected_resource: resource } }, 201);
   } catch (error) {
     return json({ error: error?.message ?? 'Could not create payment intent' }, 400);
