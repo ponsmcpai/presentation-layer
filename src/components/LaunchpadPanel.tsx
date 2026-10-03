@@ -136,17 +136,12 @@ function RecentGraduations() {
     setLoading(true); setErr('');
     // Try MCP call first (pons_recent_graduations via HTTP transport)
     try {
-      const res = await fetch('https://mcp.ponsmcp.ai/mcp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jsonrpc: '2.0', id: 1, method: 'tools/call',
-          params: { name: 'pons_recent_graduations', arguments: { limit: 10 } },
-        }),
+      const res = await fetch('/api/graduations', {
+        method: 'GET',
         signal: AbortSignal.timeout(5000),
       });
       const d = await res.json();
-      const content = d?.result?.content?.[0]?.text;
+      const content = JSON.stringify({ content: [{ text: JSON.stringify({ graduations: d.graduations ?? [] }) }] }); d?.result?.content?.[0]?.text;
       if (content) {
         const parsed = JSON.parse(content);
         const rows: LaunchRow[] = Array.isArray(parsed?.graduations ?? parsed) ? (parsed?.graduations ?? parsed) : [];
@@ -228,7 +223,7 @@ function LaunchIntelligence() {
       const res = await fetch('/api/signals?limit=60&source=GRADE+A');
       const d = await res.json();
       if (!res.ok) throw new Error(d.error ?? 'failed');
-      const rows: SignalRow[] = d.signals ?? [];
+      const rows: SignalRow[] = (d.signals ?? []).filter((s: any) => (s.source ?? '').toUpperCase().includes('GRADE'));
       // Sort by MC descending, take top 5
       const top5 = rows
         .filter(s => s.source === 'GRADE A')

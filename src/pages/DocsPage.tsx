@@ -60,6 +60,12 @@ const ROWS: Record<DocSection, Array<[string, string, string]>> = {
     ['pons_tx_status', 'txHash', 'receipt + decoded transfers'],
     ['x402_fetch', 'url', 'fetch any URL, auto-settle x402 402s, retry with proof'],
     ['x402_discover', 'domain', 'probe a domain for x402 paid resources'],
+    ['x402_health', 'url', 'probe a URL for x402 support without paying'],
+    ['pons_buy', 'token, amountEth, dryRun', 'buy a pons v2 launch token on the bonding curve (dryRun default)'],
+    ['pons_sell', 'token, tokenAmount, dryRun', 'sell pons v2 launch tokens back to the curve (dryRun default)'],
+    ['pons_pay_batch', 'payments[], maxTotalUsd, dryRun', 'pay multiple recipients — policy-checked per payment'],
+    ['pons_scan_interesting', 'limit', 'score recent launches by graduation progress + freshness'],
+    ['pons_recent_graduations', 'limit', 'recent PoolGraduated events with tx links'],
     ['pons_stocks_list', '—', 'all 19 tokenized stock tokens + addresses'],
     ['pons_stock_price', 'ticker', 'live DEX price for a stock token'],
     ['pons_stock_info', 'ticker', 'on-chain stock token metadata'],
@@ -218,7 +224,7 @@ ponsmcp`}</Code>
                   </div>
                 ))}
               </div>
-              <p className="mt-4 text-sm leading-7 text-white/60">Five tools move funds: <span className="font-mono text-[#fdba74]">pons_pay</span>, <span className="font-mono text-[#fdba74]">pons_pay_resource</span>, <span className="font-mono text-[#fdba74]">pons_send_token</span>, <span className="font-mono text-[#fdba74]">pons_send_eth</span>, and <span className="font-mono text-[#fdba74]">x402_fetch</span> (only when the target answers 402). Everything else is read-only and needs no wallet.</p>
+              <p className="mt-4 text-sm leading-7 text-white/60">Eight tools move funds: <span className="font-mono text-[#fdba74]">pons_pay</span>, <span className="font-mono text-[#fdba74]">pons_pay_resource</span>, <span className="font-mono text-[#fdba74]">pons_send_token</span>, <span className="font-mono text-[#fdba74]">pons_send_eth</span>, and <span className="font-mono text-[#fdba74]">x402_fetch</span> (only when the target answers 402). Everything else is read-only and needs no wallet.</p>
 
               <h3 className="mt-8 text-lg font-bold text-white">Payment tools in detail</h3>
               <div className="mt-3 grid gap-3">

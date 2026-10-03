@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Card } from './Primitives';
 import { Bot, Send, Loader2, CheckCircle2, CircleDollarSign, FileText } from 'lucide-react';
 
-type Msg = { role: 'agent' | 'system'; text: string; tool?: string; ts: number };
+type Msg = { role: 'agent' | 'system' | 'user'; text: string; tool?: string; ts: number; ok?: boolean };
 
 // Built-in agent demo — runs real tool calls against the live console API.
 // Shows the payment loop end-to-end: quote → policy → (execute) → verify.
@@ -35,11 +35,11 @@ export function AgentPanel() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'intent failed');
 
-      push({ role: 'agent', text: `Policy PASSED — cap 100 USDG/tx, well under daily limit. Intent ${data.intent.id} created for 0.01 USDG → ${data.intent.payment.pay_to.slice(0, 10)}…`, tool: 'policy_check', ts: Date.now() });
+      push({ role: 'agent', text: `Policy PASSED — cap 100 USDG/tx, well under daily limit. Intent ${data.intent.id} created for 0.01 USDG → ${data.intent.payment.pay_to.slice(0, 10)}…`, tool: 'policy_check', ts: Date.now(), ok: true });
 
-      push({ role: 'agent', text: `Next step in a real run: sign locally with PONSMCP_PRIVATE_KEY and broadcast via pons_pay. The console never signs — grab the intent JSON from the New payment tab to run it yourself.`, ts: Date.now() });
+      push({ role: 'agent', text: `Next step in a real run: sign locally with PONSMCP_PRIVATE_KEY and broadcast via pons_pay. The console never signs — grab the intent JSON from the New payment tab to run it yourself.`, ts: Date.now(), ok: undefined });
     } catch (e: any) {
-      push({ role: 'agent', text: `Error: ${e?.message ?? 'unknown'}`, ts: Date.now() });
+      push({ role: 'agent', text: `Error: ${e?.message ?? 'unknown'}`, ts: Date.now(), ok: false });
     } finally { setBusy(false); }
   }
 
@@ -54,10 +54,11 @@ export function AgentPanel() {
       const data = await res.json();
       if (data.result) {
         const block = parseInt(data.result, 16);
-        push({ role: 'agent', text: `Robinhood Chain 4663 live — block ${block.toLocaleString('en-US')}. Settlement asset USDG, gas ~0.03 gwei.`, ts: Date.now() });
+        if (!Number.isFinite(block)) throw new Error('malformed block number from RPC');
+        push({ role: 'agent', text: `Robinhood Chain 4663 live — block ${block.toLocaleString('en-US')}. Settlement asset USDG, gas ~0.03 gwei.`, ts: Date.now(), ok: true });
       } else throw new Error('rpc failed');
     } catch (e: any) {
-      push({ role: 'agent', text: `Error: ${e?.message ?? 'unknown'}`, ts: Date.now() });
+      push({ role: 'agent', text: `Error: ${e?.message ?? 'unknown'}`, ts: Date.now(), ok: false });
     } finally { setBusy(false); }
   }
 
@@ -67,10 +68,11 @@ export function AgentPanel() {
       push({ role: 'agent', text: 'Screening all 19 tokenized stocks...', tool: 'pons_stocks_screen', ts: Date.now() });
       const res = await fetch('/api/launches');
       const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'launches fetch failed');
       const grad = data.summary?.Graduated ?? 0;
-      push({ role: 'agent', text: `Pons ecosystem: ${data.total} launches tracked, ${grad} graduated to DEX. Top signal today: check the Launch intel tab for live Grade A feed.`, ts: Date.now() });
+      push({ role: 'agent', text: `Pons ecosystem: ${data.total ?? 0} launches tracked, ${grad} graduated to DEX. Top signal today: check the Launch intel tab for live Grade A feed.`, ts: Date.now(), ok: true });
     } catch (e: any) {
-      push({ role: 'agent', text: `Error: ${e?.message ?? 'unknown'}`, ts: Date.now() });
+      push({ role: 'agent', text: `Error: ${e?.message ?? 'unknown'}`, ts: Date.now(), ok: false });
     } finally { setBusy(false); }
   }
 
@@ -85,7 +87,7 @@ export function AgentPanel() {
       if (!sigs.length) { push({ role: 'agent', text: 'No Grade A signals found right now.', ts: Date.now() }); return; }
       const top3 = sigs.slice(0, 3).map((s: any) => `${s.symbol} — MC $${((s.marketCapUsd ?? 0) / 1000).toFixed(1)}K, liq $${((s.liquidityUsd ?? 0) / 1000).toFixed(1)}K, ${s.holdersTotal ?? '?'} holders`).join(' · ');
       push({ role: 'agent', text: `${sigs.length} Grade A signals right now. Top: ${top3}. Full breakdown in the Launch intel tab.`, ts: Date.now() });
-    } catch (e: any) { push({ role: 'agent', text: `Error: ${e?.message ?? 'unknown'}`, ts: Date.now() }); }
+    } catch (e: any) { push({ role: 'agent', text: `Error: ${e?.message ?? 'unknown'}`, ts: Date.now(), ok: false }); }
     finally { setBusy(false); }
   }
 
@@ -112,6 +114,13 @@ export function AgentPanel() {
         {/* Message feed */}
         <div ref={feedRef} className="flex max-h-[420px] min-h-[280px] flex-col gap-3 overflow-y-auto rounded-xl p-4" style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.07)' }}>
           {msgs.map((m, i) => (
+            m.role === 'user' ? (
+              <div key={i} className="flex justify-end">
+                <div className="max-w-[80%] rounded-xl px-3.5 py-2.5" style={{ background: 'rgba(249,115,22,0.12)', border: '1px solid rgba(249,115,22,0.3)' }}>
+                  <p className="text-xs leading-relaxed text-[#fdba74]">{m.text}</p>
+                </div>
+              </div>
+            ) : (
             <div key={i} className={m.role === 'agent' ? 'flex gap-3' : 'flex justify-center'}>
               {m.role === 'agent' && (
                 <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full" style={{ background: 'rgba(249,115,22,0.15)', border: '1px solid rgba(249,115,22,0.35)' }}>
@@ -125,9 +134,11 @@ export function AgentPanel() {
                   </div>
                 )}
                 <p className={`text-xs leading-relaxed ${m.role === 'system' ? 'text-center text-white/40' : 'text-white/75'}`}>{m.text}</p>
-                {m.role === 'agent' && <div className="mt-1 flex items-center gap-1 text-[9px] text-green-400"><CheckCircle2 className="h-2.5 w-2.5" /> verified</div>}
+                {m.role === 'agent' && m.ok === true && <div className="mt-1 flex items-center gap-1 text-[9px] text-green-400"><CheckCircle2 className="h-2.5 w-2.5" /> verified</div>}
+                {m.role === 'agent' && m.ok === false && <div className="mt-1 flex items-center gap-1 text-[9px] text-red-400"><CheckCircle2 className="h-2.5 w-2.5" /> failed</div>}
               </div>
             </div>
+            )
           ))}
           {busy && (
             <div className="flex items-center gap-2 text-xs text-white/40">
@@ -141,12 +152,23 @@ export function AgentPanel() {
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter' && input.trim() && !busy) { push({ role: 'agent', text: `"${input}" — use the quick actions above to run real tool calls. Free-text agent reasoning runs in your own runtime with the SDK; this console demonstrates the payment primitives.`, ts: Date.now() }); setInput(''); } }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && input.trim() && !busy) {
+                push({ role: 'user', text: input, ts: Date.now() });
+                push({ role: 'agent', text: 'Free-text agent reasoning runs in your own runtime with the SDK — this console demonstrates the payment primitives. Use the quick actions above for live tool calls.', ts: Date.now() });
+                setInput('');
+              }
+            }}
             placeholder="Ask the agent to pay, query chain, screen market..."
             className="flex-1 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-xs text-white placeholder-white/30 outline-none focus:border-[#f97316]/50"
           />
           <button disabled={!input.trim() || busy}
-            onClick={() => { push({ role: 'agent', text: `"${input}" — use the quick actions above to run real tool calls. Free-text agent reasoning runs in your own runtime with the SDK; this console demonstrates the payment primitives.`, ts: Date.now() }); setInput(''); }}
+            onClick={() => {
+              if (!input.trim() || busy) return;
+              push({ role: 'user', text: input, ts: Date.now() });
+              push({ role: 'agent', text: 'Free-text agent reasoning runs in your own runtime with the SDK — this console demonstrates the payment primitives. Use the quick actions above for live tool calls.', ts: Date.now() });
+              setInput('');
+            }}
             className="btn-primary inline-flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-xs font-bold disabled:opacity-40">
             <Send className="h-3.5 w-3.5" />
           </button>

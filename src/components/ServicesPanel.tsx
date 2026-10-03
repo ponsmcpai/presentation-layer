@@ -124,13 +124,15 @@ const TOOL_GROUPS: Array<{ group: string; note: string; tools: Array<[string, st
     ['pons_send_token', 'Send any ERC-20 by ticker or address', true],
     ['pons_send_eth', 'Send native ETH', true],
   ]},
-  { group: 'BATCH PAYMENT', note: 'Multi-recipient USDG disbursements in one call', tools: [
+  { group: 'TRADING & BATCH', note: 'Multi-recipient USDG disbursements in one call', tools: [
     ['pons_pay_batch', 'Send USDG to multiple recipients atomically — policy-checked, each transfer individually receipt-verified on-chain', true],
     ['pons_buy', 'Buy a pons v2 launch token on the bonding curve — quote first, dryRun by default, 0.01 ETH hard cap', true],
     ['pons_sell', 'Sell pons v2 launch tokens back to the curve — allowance-aware, policy-guarded, dryRun by default', true],
     ['pons_scan_interesting', 'Scan recent TokenLaunched events and score launches by graduation progress + freshness', false],
     ['pons_recent_graduations', 'Recent PoolGraduated events — tokens that hit DEX, decoded with tx links', false],
     ['x402_health', 'Probe any URL for x402 support — returns payment requirements without paying', false],
+    ['x402_discover', 'Discover x402-enabled paid resources on any domain — probe /.well-known/x402 manifest', false],
+    ['x402_fetch', 'Fetch any URL — if it answers 402, settle via policy-checked USDG payment and retry automatically', true],
   ]},
 ];
 
