@@ -2,8 +2,9 @@
 // Presentation lives in src/components/* (Sparkline, TokenIcon, SignalDrawer,
 // LaunchDrawer, TradePreview, UnlockedContent, Step, Card, panels).
 import { useCallback, useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
 import {
-  Activity, ArrowRight, Bot, Boxes, CircleDollarSign, FileCheck2, Gauge, Loader2,
+  Activity, ArrowRight, Bot, Boxes, CircleDollarSign, FileCheck2, Gauge, Link2, Loader2,
   Menu, Network, Receipt, Rocket, Settings, ShieldCheck, X,
 } from 'lucide-react';
 import { Step, Card } from '@/components/Primitives';
@@ -44,8 +45,34 @@ const NAV = [
 
 type Tab = (typeof NAV)[number]['items'][number]['key'];
 
+const TAB_SLUGS: Record<string, string> = {
+  'Agent runner': 'agent',
+  'New payment': 'pay',
+  'Receipts': 'receipts',
+  'Activity': 'activity',
+  'Chain status': 'chain',
+  'Services': 'services',
+  'MCP tools': 'tools',
+  'Launch intel': 'intel',
+  'Launchpad': 'launchpad',
+  'Integration': 'integration',
+  'Policy': 'policy',
+  'Settings': 'settings',
+};
+const SLUG_TO_TAB = Object.fromEntries(Object.entries(TAB_SLUGS).map(([k, v]) => [v, k]));
+
 export function AppPage() {
-  const [tab, setTab] = useState<Tab>('Agent runner');
+  const { slug } = useParams<{ slug?: string }>();
+  const [tab, setTab] = useState<Tab>(() => {
+    if (slug && SLUG_TO_TAB[slug]) return SLUG_TO_TAB[slug] as Tab;
+    return 'Agent runner';
+  });
+  // Sync URL → tab when navigating directly to a deep link
+  useEffect(() => {
+    if (slug && SLUG_TO_TAB[slug] && SLUG_TO_TAB[slug] !== tab) {
+      setTab(SLUG_TO_TAB[slug] as Tab);
+    }
+  }, [slug]);
   const [navOpen, setNavOpen] = useState(false);
   const [merchant, setMerchant] = useState('');
   const [amount, setAmount] = useState('5.00');
@@ -222,6 +249,14 @@ export function AppPage() {
     '# PONSMCP_ALCHEMY_KEY=<key>',
   ].join('\n');
 
+  useEffect(() => {
+    const slug = TAB_SLUGS[tab];
+    if (slug) {
+      const url = `/app/${slug}`;
+      if (window.location.pathname !== url) window.history.replaceState(null, '', url);
+    }
+  }, [tab]);
+
   const navForSidebar = NAV.map((g) => ({ group: g.group, items: g.items.map((i) => ({ key: i.key, icon: i.icon })) }));
   const pendingCount = history.filter((i) => i.status === 'pending').length;
 
@@ -263,6 +298,11 @@ export function AppPage() {
               </p>
             </div>
             <div className="flex items-center gap-2">
+              <button onClick={() => navigator.clipboard?.writeText(window.location.href)}
+                title="Copy link to this tab"
+                className="btn-secondary inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-bold text-white/70">
+                <Link2 className="h-3.5 w-3.5" /> Copy link
+              </button>
               <a href="https://x.com/Pons_MCP" target="_blank" rel="noopener noreferrer" className="btn-secondary inline-flex items-center rounded-full px-3.5 py-2 text-xs font-bold text-white/70">𝕏</a>
               <a href="https://github.com/ponsmcpai/ponsmcp-sdk" target="_blank" rel="noopener noreferrer" className="btn-secondary inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold">
                 <Network className="h-3.5 w-3.5" /> SDK source

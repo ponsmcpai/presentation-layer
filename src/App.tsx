@@ -38,6 +38,7 @@ function App() {
             <Route path="/docs" element={<DocsPage />} />
             <Route path="/status" element={<StatusPage />} />
             <Route path="/app" element={<AppPage />} />
+          <Route path="/app/:slug" element={<AppPage />} />
           </Routes>
         </div>
       </BrowserRouter>
