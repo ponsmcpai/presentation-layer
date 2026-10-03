@@ -307,14 +307,18 @@ function SignalDrawer({ signal, onClose }: { signal: SignalRow; onClose: () => v
     setChart(null); setChartErr(false);
     (async () => {
       try {
-        const res = await fetch(`/api/chart?coin=pons&days=${chartRange}`);
+        const resMap = { '1': 'hour', '7': 'hour', '30': 'day' } as Record<string, string>;
+        const limitMap = { '1': 24, '7': 48, '30': 30 };
+        const res = await fetch(`/api/token-chart?token=${signal.tokenAddress}&res=${resMap[chartRange]}&limit=${limitMap[chartRange]}`);
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error);
-        if (alive) setChart((data.prices ?? []).map((p: [number, number]) => [p[0], p[1]] as [number, number]));
+        if (!res.ok) throw new Error(data.error ?? 'chart failed');
+        // candles: [timestamp_sec, open, high, low, close, volume] → convert to [ms, close] for Sparkline
+        const pts = (data.candles ?? []).map((c: number[]) => [c[0] * 1000, c[4]] as [number, number]);
+        if (alive) setChart(pts.length > 1 ? pts : null);
       } catch { if (alive) setChartErr(true); }
     })();
     return () => { alive = false; };
-  }, [chartRange]);
+  }, [chartRange, signal.tokenAddress]);
 
   const first = chart?.[0]?.[1] ?? 0;
   const last = chart?.[chart.length - 1]?.[1] ?? 0;
@@ -344,7 +348,7 @@ function SignalDrawer({ signal, onClose }: { signal: SignalRow; onClose: () => v
           {/* Chart */}
           <div className="rounded-xl p-3" style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)' }}>
             <div className="mb-2 flex items-center justify-between">
-              <p className="text-xs font-bold text-white/70">PONS reference chart · CoinGecko</p>
+              <p className="text-xs font-bold text-white/70">{signal.symbol} · GeckoTerminal · Robinhood Chain</p>
               <div className="flex gap-1">
                 {(['1', '7', '30'] as const).map((d) => (
                   <button key={d} onClick={() => setChartRange(d)} className="rounded px-2 py-0.5 font-mono text-[10px]" style={chartRange === d ? { background: 'rgba(249,115,22,0.2)', color: '#fdba74' } : { color: 'rgba(255,255,255,0.35)' }}>{d}D</button>
