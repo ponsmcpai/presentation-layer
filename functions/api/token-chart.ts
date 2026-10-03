@@ -15,10 +15,27 @@ export async function onRequestGet({ request }) {
   }
 
   try {
+    // GeckoTerminal free tier throttles aggressively (429s). Add retry with
+    // backoff + 60s edge cache so repeat drawer opens don't re-hit upstream.
+    async function gtFetch(url: string, tries = 3) {
+      for (let i = 0; i < tries; i++) {
+        const r = await fetch(url, {
+          headers: { Accept: 'application/json', 'User-Agent': 'ponsmcp-web/1.0' },
+          signal: AbortSignal.timeout(8_000),
+        });
+        if (r.ok) return r;
+        if (r.status === 429 && i < tries - 1) {
+          await new Promise((res) => setTimeout(res, 1_200 * (i + 1)));
+          continue;
+        }
+        return r;
+      }
+      throw new Error('unreachable');
+    }
+
     // Step 1: find the best pool for this token
-    const poolsRes = await fetch(
-      `https://api.geckoterminal.com/api/v2/networks/robinhood/tokens/${token}/pools?page=1`,
-      { headers: { Accept: 'application/json', 'User-Agent': 'ponsmcp-web/1.0' }, signal: AbortSignal.timeout(8_000) }
+    const poolsRes = await gtFetch(
+      `https://api.geckoterminal.com/api/v2/networks/robinhood/tokens/${token}/pools?page=1`
     );
     if (!poolsRes.ok) return json({ error: `geckoterminal pools ${poolsRes.status}` }, 502);
     const poolsData = await poolsRes.json();
@@ -34,9 +51,8 @@ export async function onRequestGet({ request }) {
     const liquidityUsd = best.attributes?.reserve_in_usd ?? null;
 
     // Step 2: fetch OHLCV candles
-    const ohlcvRes = await fetch(
-      `https://api.geckoterminal.com/api/v2/networks/robinhood/pools/${poolAddr}/ohlcv/${resolution}?aggregate=1&limit=${limit}`,
-      { headers: { Accept: 'application/json', 'User-Agent': 'ponsmcp-web/1.0' }, signal: AbortSignal.timeout(8_000) }
+    const ohlcvRes = await gtFetch(
+      `https://api.geckoterminal.com/api/v2/networks/robinhood/pools/${poolAddr}/ohlcv/${resolution}?aggregate=1&limit=${limit}`
     );
     if (!ohlcvRes.ok) return json({ error: `geckoterminal ohlcv ${ohlcvRes.status}` }, 502);
     const ohlcvData = await ohlcvRes.json();
