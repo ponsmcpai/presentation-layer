@@ -126,13 +126,18 @@ const TOOL_GROUPS: Array<{ group: string; note: string; tools: Array<[string, st
   ]},
   { group: 'BATCH PAYMENT', note: 'Multi-recipient USDG disbursements in one call', tools: [
     ['pons_pay_batch', 'Send USDG to multiple recipients atomically — policy-checked, each transfer individually receipt-verified on-chain', true],
+    ['pons_buy', 'Buy a pons v2 launch token on the bonding curve — quote first, dryRun by default, 0.01 ETH hard cap', true],
+    ['pons_sell', 'Sell pons v2 launch tokens back to the curve — allowance-aware, policy-guarded, dryRun by default', true],
+    ['pons_scan_interesting', 'Scan recent TokenLaunched events and score launches by graduation progress + freshness', false],
+    ['pons_recent_graduations', 'Recent PoolGraduated events — tokens that hit DEX, decoded with tx links', false],
+    ['x402_health', 'Probe any URL for x402 support — returns payment requirements without paying', false],
   ]},
 ];
 
 export function McpToolsPanel() {
   return (
     <div className="grid gap-5">
-      <Card title="MCP tool surface" subtitle={`26 tools · ${TOOL_GROUPS.length} categories · zero runtime dependencies`}>
+      <Card title="MCP tool surface" subtitle={`33 tools · ${TOOL_GROUPS.length} categories · zero runtime dependencies`}>
         <div className="grid gap-5 p-5">
           {TOOL_GROUPS.map((g) => (
             <div key={g.group}>
