@@ -671,6 +671,96 @@ function LaunchDrawer({ launch, onClose }: { launch: LaunchRow; onClose: () => v
   );
 }
 
+function UnlockedContent({ kind, data }: { kind: string; data: any }) {
+  return (
+    <div className="overflow-hidden rounded-xl animate-slide-fade-in" style={{ background: 'rgba(74,222,128,0.05)', border: '1px solid rgba(74,222,128,0.3)' }}>
+      <div className="flex items-center gap-2 px-5 py-3" style={{ borderBottom: '1px solid rgba(74,222,128,0.2)', background: 'rgba(74,222,128,0.08)' }}>
+        <span className="flex h-5 w-5 items-center justify-center rounded-full" style={{ background: 'rgba(74,222,128,0.25)' }}>
+          <Check className="h-3 w-3 text-green-400" />
+        </span>
+        <p className="text-xs font-bold uppercase tracking-[0.14em] text-green-400">Unlocked — paid content</p>
+      </div>
+      <div className="p-5">
+        {kind === 'sandbox_receipt' && (
+          <>
+            <p className="text-sm font-bold text-white">{data.message ?? 'Payment rail verified.'}</p>
+            <ul className="mt-3 space-y-2">
+              {(data.what_this_proves ?? []).map((item: string) => (
+                <li key={item} className="flex items-start gap-2 text-xs text-white/60"><Check className="mt-0.5 h-3 w-3 shrink-0 text-green-400" /> {item}</li>
+              ))}
+            </ul>
+            {data.next_step && <p className="mt-3 rounded-lg px-3 py-2 text-xs text-white/55" style={{ background: 'rgba(255,255,255,0.04)' }}>{data.next_step}</p>}
+          </>
+        )}
+
+        {kind === 'signal_digest' && (
+          <>
+            <p className="text-xs text-white/50">Latest {data.top_signals?.length ?? 0} Grade A signals, captured by the live notifier:</p>
+            <div className="mt-3 overflow-hidden rounded-lg border border-white/10">
+              {(data.top_signals ?? []).map((s: any, i: number) => (
+                <div key={s.address ?? i} className="flex items-center justify-between gap-3 px-3 py-2" style={{ borderTop: i ? '1px solid rgba(255,255,255,0.05)' : 'none', background: i % 2 ? 'rgba(255,255,255,0.02)' : 'transparent' }}>
+                  <span className="font-mono text-xs font-bold text-[#fdba74]">{s.symbol}</span>
+                  <span className="font-mono text-[10px] text-white/50">{s.price_usd != null ? fmtPrice(s.price_usd) : '—'}</span>
+                  <span className="font-mono text-[10px] text-white/40">{fmtUsd(s.market_cap_usd)}</span>
+                  <span className="font-mono text-[10px] text-white/40">{s.holders ?? '—'} holders</span>
+                  <span className="rounded px-1.5 py-0.5 font-mono text-[8px] font-bold" style={{ background: 'rgba(249,115,22,0.14)', color: '#fdba74' }}>{s.source}</span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {kind === 'stock_screener_report' && (
+          <>
+            <p className="text-xs text-white/50">All {data.universe} Robinhood Chain stocks, live-ranked by DEX liquidity:</p>
+            <div className="mt-3 overflow-hidden rounded-lg border border-white/10">
+              {(data.ranked_by_liquidity ?? []).slice(0, 10).map((t: any, i: number) => (
+                <div key={t.symbol} className="flex items-center justify-between gap-3 px-3 py-2" style={{ borderTop: i ? '1px solid rgba(255,255,255,0.05)' : 'none', background: i % 2 ? 'rgba(255,255,255,0.02)' : 'transparent' }}>
+                  <span className="font-mono text-xs font-bold text-white">{i + 1}. {t.symbol}</span>
+                  <span className="font-mono text-[10px] text-white/60">{t.price_usd != null ? fmtPrice(t.price_usd) : '—'}</span>
+                  <span className="font-mono text-[10px] text-white/40">{fmtUsd(t.liquidity_usd)} liq</span>
+                  <span className="font-mono text-[10px]" style={{ color: pctColor(t.change_24h_pct) }}>{fmtPct(t.change_24h_pct)}</span>
+                </div>
+              ))}
+            </div>
+            <p className="mt-2 text-[10px] text-white/30">Showing top 10 of {data.ranked_by_liquidity?.length ?? 0}.</p>
+          </>
+        )}
+
+        {kind === 'live_chain_snapshot' && (
+          <>
+            <p className="text-xs text-white/50">{data.note}</p>
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              <div className="rounded-lg p-3" style={{ background: 'rgba(0,0,0,0.25)' }}>
+                <p className="text-[10px] uppercase text-white/35">Factory config count</p>
+                <p className="mt-1 font-mono text-lg font-bold text-[#fdba74]">{data.launch_config_count ?? '—'}</p>
+              </div>
+              <div className="rounded-lg p-3" style={{ background: 'rgba(0,0,0,0.25)' }}>
+                <p className="text-[10px] uppercase text-white/35">Latest block at unlock</p>
+                <p className="mt-1 font-mono text-lg font-bold text-white">{data.latest_block?.toLocaleString() ?? '—'}</p>
+              </div>
+            </div>
+            <p className="mt-2 font-mono text-[9px] text-white/30">{data.factory}</p>
+          </>
+        )}
+
+        {kind === 'integration_guide' && (
+          <>
+            <p className="text-xs text-white/50">Your copy-paste SDK quickstart:</p>
+            <div className="mt-2 rounded-lg p-3 font-mono text-[11px] leading-5" style={{ background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.1)', color: '#fdba74' }}>
+              <div>{data.install}</div>
+              {(data.quickstart ?? []).map((line: string) => <div key={line}>{line}</div>)}
+            </div>
+            <p className="mt-2 text-[10px] text-white/35">Policy defaults: {data.policy_defaults?.per_tx_cap_usdg} USDG/tx · {data.policy_defaults?.daily_cap_usdg} USDG/day. Docs: {data.docs}</p>
+          </>
+        )}
+
+        {kind === 'generic' && <p className="text-sm text-white/70">{data.content}</p>}
+      </div>
+    </div>
+  );
+}
+
 export function AppPage() {
   const [tab, setTab] = useState<Tab>('New payment');
   const [navOpen, setNavOpen] = useState(false);
@@ -688,6 +778,8 @@ export function AppPage() {
   const [quoteBusy, setQuoteBusy] = useState(false);
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
   const [justPassedPolicy, setJustPassedPolicy] = useState(false);
+  const [unlocked, setUnlocked] = useState<{ kind: string; data: any } | null>(null);
+  const [unlockedBusy, setUnlockedBusy] = useState(false);
   const [liveTick, setLiveTick] = useState(false);
 
   const refreshLive = useCallback(async () => {
@@ -753,7 +845,7 @@ export function AppPage() {
     const parsed = Number(amount);
     if (!addrOk(merchant)) { setError('Enter a valid merchant wallet address (0x + 40 hex characters).'); return; }
     if (!Number.isFinite(parsed) || parsed <= 0 || parsed > 100) { setError('Amount must be greater than 0 and within the 100 USDG per-payment policy cap.'); return; }
-    setQuoteBusy(true);
+    setQuoteBusy(true); setUnlocked(null);
     setQuote(null);
     setJustPassedPolicy(false);
     try {
@@ -796,6 +888,16 @@ export function AppPage() {
         const data = await response.json();
         if (!response.ok) throw new Error(data.error ?? 'Intent verification failed');
         setReceipt({ status: 'success', block: Number(data.receipt.block_number).toLocaleString('en-US'), gas: Number(data.receipt.gas_used).toLocaleString('en-US'), hash: txHash });
+        // Fetch the unlocked resource — the actual thing the user paid for.
+        if (quote.protectedResource) {
+          setUnlockedBusy(true);
+          try {
+            const res2 = await fetch(quote.protectedResource);
+            const data2 = await res2.json();
+            if (res2.ok && data2.data) setUnlocked({ kind: data2.data.kind ?? 'generic', data: data2.data });
+          } catch { /* unlocked content fetch is best-effort; receipt is still shown */ }
+          finally { setUnlockedBusy(false); }
+        }
         void refreshHistory();
       } else {
         const chainReceipt = await rpc<any>('eth_getTransactionReceipt', [txHash]);
@@ -1145,11 +1247,27 @@ export function AppPage() {
                       View on Blockscout <ExternalLink className="h-3.5 w-3.5" />
                     </a>
                     {quote && receipt.status === 'success' && quote.protectedResource && (
-                      <a href={quote.protectedResource} target="_blank" rel="noopener noreferrer" className="btn-primary inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-bold">
-                        Open the resource this unlocked <ExternalLink className="h-3.5 w-3.5" />
-                      </a>
+                      <button onClick={() => { setUnlockedBusy(true); fetch(quote.protectedResource!).then(r => r.json()).then(d => { if (d.data) setUnlocked({ kind: d.data.kind ?? 'generic', data: d.data }); }).catch(() => {}).finally(() => setUnlockedBusy(false)); }}
+                        className="btn-primary inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-bold">
+                        {unlocked ? 'Refresh unlocked content' : 'View what you unlocked'} <ExternalLink className="h-3.5 w-3.5" />
+                      </button>
                     )}
                   </div>
+
+                  {/* ===== UNLOCKED CONTENT — what you actually paid for ===== */}
+                  {quote?.protectedResource && receipt.status === 'success' && (
+                    <div className="mx-5 mb-5">
+                      {unlockedBusy && (
+                        <div className="rounded-xl p-4" style={{ background: 'rgba(249,115,22,0.06)', border: '1px solid rgba(249,115,22,0.25)' }}>
+                          <div className="relative h-1.5 overflow-hidden rounded-full bg-white/10">
+                            <div className="absolute inset-y-0 w-1/3 rounded-full bg-gradient-to-r from-transparent via-[#f97316] to-transparent animate-scan-sweep" />
+                          </div>
+                          <p className="mt-3 font-mono text-xs text-white/45">Unlocking your content...</p>
+                        </div>
+                      )}
+                      {!unlockedBusy && unlocked && <UnlockedContent kind={unlocked.kind} data={unlocked.data} />}
+                    </div>
+                  )}
                 </div>
               )}
             </Card>
