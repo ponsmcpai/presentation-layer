@@ -686,6 +686,7 @@ export function AppPage() {
   const [history, setHistory] = useState<IntentRow[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [quoteBusy, setQuoteBusy] = useState(false);
+  const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
   const [justPassedPolicy, setJustPassedPolicy] = useState(false);
   const [liveTick, setLiveTick] = useState(false);
 
@@ -761,7 +762,7 @@ export function AppPage() {
       await new Promise((r) => setTimeout(r, 380));
       const response = await fetch('/api/intents', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ merchant_address: merchant, amount_usdg: parsed.toFixed(6) }),
+        body: JSON.stringify({ merchant_address: merchant, amount_usdg: parsed.toFixed(6), ...(selectedServiceId ? { service_id: selectedServiceId } : {}) }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? 'Could not create payment intent');
@@ -967,7 +968,7 @@ export function AppPage() {
                     {services.length > 0 && (
                       <div className="flex flex-wrap gap-2">
                         {services.slice(0, 3).map((service) => (
-                          <button key={service.id} onClick={() => { setMerchant(service.merchant); setAmount(Number(service.price_usdg).toFixed(2)); setQuote(null); }}
+                          <button key={service.id} onClick={() => { setMerchant(service.merchant); setAmount(Number(service.price_usdg).toFixed(2)); setSelectedServiceId(service.id); setQuote(null); }}
                             className="rounded-full border border-[#f97316]/30 bg-[#f97316]/[0.08] px-3 py-1.5 text-xs text-[#fdba74] transition hover:bg-[#f97316]/15">
                             {service.name} · {Number(service.price_usdg).toFixed(2)}
                           </button>
@@ -1270,7 +1271,7 @@ export function AppPage() {
                             ))}
                           </ul>
                         )}
-                        <button onClick={() => { setMerchant(service.merchant); setAmount(Number(service.price_usdg).toFixed(2)); setTab('New payment'); setQuote(null); }}
+                        <button onClick={() => { setMerchant(service.merchant); setAmount(Number(service.price_usdg).toFixed(2)); setSelectedServiceId(service.id); setTab('New payment'); setQuote(null); }}
                           className="btn-primary mt-4 inline-flex w-full items-center justify-center gap-1.5 rounded-lg py-2.5 text-xs font-bold">
                           Buy with agent payment <ArrowRight className="h-3 w-3" />
                         </button>
