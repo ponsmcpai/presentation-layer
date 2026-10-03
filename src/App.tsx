@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import './App.css';
 import { ThemeProvider } from '@/hooks/useTheme';
 import { Navbar } from '@/sections/Navbar';
@@ -37,7 +37,7 @@ function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/docs" element={<DocsPage />} />
             <Route path="/status" element={<StatusPage />} />
-            <Route path="/app" element={<AppPage />} />
+            <Route path="/app" element={<Navigate to="/app/agent" replace />} />
           <Route path="/app/:slug" element={<AppPage />} />
           </Routes>
         </div>

@@ -141,7 +141,7 @@ export function Navbar() {
                 </svg>
               </a>
             </div>
-            <Link to="/app" className="hidden sm:block">
+            <Link to="/app/agent" className="hidden sm:block">
               <button
                 className="btn-primary px-5 py-2.5 text-sm font-semibold"
                 style={{ borderRadius: '9999px' }}
@@ -180,7 +180,7 @@ export function Navbar() {
                 {link.label}
               </a>
             ))}
-            <Link to="/app" className="block pt-2" onClick={() => setIsMobileMenuOpen(false)}>
+            <Link to="/app/agent" className="block pt-2" onClick={() => setIsMobileMenuOpen(false)}>
               <button className="btn-primary w-full py-2.5 text-sm font-semibold rounded-full">
                 Open App
               </button>
