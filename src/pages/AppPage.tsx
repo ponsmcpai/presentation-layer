@@ -3,19 +3,23 @@
 // LaunchDrawer, TradePreview, UnlockedContent, Step, Card, panels).
 import { useCallback, useEffect, useState } from 'react';
 import {
-  Activity, ArrowRight, Boxes, CircleDollarSign, FileCheck2, Gauge, Loader2,
+  Activity, ArrowRight, Bot, Boxes, CircleDollarSign, FileCheck2, Gauge, Loader2,
   Menu, Network, Receipt, Settings, ShieldCheck, X,
 } from 'lucide-react';
 import { Step, Card } from '@/components/Primitives';
 import { StatStrip, ActivityPanel, ChainStatusPanel, McpConnectCard } from '@/components/StatusPanels';
 import { QuoteReady } from '@/components/QuoteReady';
 import { ReceiptsPanel } from '@/components/ReceiptsPanel';
+import { AgentPanel } from '@/components/AgentPanel';
 import { ServicesPanel, McpToolsPanel } from '@/components/ServicesPanel';
 import { LaunchIntelPanel } from '@/components/LaunchIntelPanel';
 import { IntegrationPanel, PolicyPanel, SettingsPanel, Sidebar } from '@/components/MiscPanels';
 import { rpc, hexToBig, addrOk, type Quote, type Live, type IntentRow, type Service } from '@/components/shared';
 
 const NAV = [
+  { group: 'AGENT', items: [
+    { key: 'Agent runner', icon: Bot },
+  ] },
   { group: 'PAYMENTS', items: [
     { key: 'New payment', icon: CircleDollarSign },
     { key: 'Receipts', icon: FileCheck2 },
@@ -78,6 +82,10 @@ export function AppPage() {
     setTimeout(() => setLiveTick(false), 500);
   }, []);
 
+  useEffect(() => {
+    const saved = localStorage.getItem('ponsmcp_default_recipient');
+    if (saved && /^0x[0-9a-fA-F]{40}$/.test(saved)) setMerchant(saved);
+  }, []);
   useEffect(() => { void refreshLive(); }, [refreshLive]);
   useEffect(() => {
     const id = setInterval(() => { void refreshLive(); }, 12000);
@@ -263,6 +271,8 @@ export function AppPage() {
           <StatStrip mcpPrice={mcpPrice} live={live} liveTick={liveTick} />
 
           {/* ============ TAB: NEW PAYMENT ============ */}
+          {tab === 'Agent runner' && <AgentPanel />}
+
           {tab === 'New payment' && (
             <>
               <div className="mb-5 flex flex-wrap items-center gap-5 rounded-2xl p-4" style={{ background: 'rgba(16,16,16,0.62)', border: '1px solid rgba(255,255,255,0.1)' }}>

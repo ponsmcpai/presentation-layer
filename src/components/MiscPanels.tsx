@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Card } from './Primitives';
 import { USDG, RH_EXPLORER } from './shared';
@@ -51,9 +52,87 @@ export function PolicyPanel() {
 }
 
 export function SettingsPanel({ settingsSnippet }: { settingsSnippet: string }) {
+  const [maxPerTx, setMaxPerTx] = useState(100);
+  const [dailyLimit, setDailyLimit] = useState(1000);
+  const [recipient, setRecipient] = useState('');
+  const [envSnippet, setEnvSnippet] = useState(settingsSnippet);
+  const [saved, setSaved] = useState(false);
+
+  // Live regenerate env snippet when inputs change
+  useEffect(() => {
+    const lines = [
+      '# PonsMCP agent runtime — required environment',
+      'PONSMCP_PRIVATE_KEY=<your 32-byte hex key, generated offline>',
+      '',
+      `# Spending policy (your config)`,
+      `PONSMCP_MAX_PER_TX=${Math.round(maxPerTx * 1_000_000)}     # ${maxPerTx} USDG per transaction (base units)`,
+      `PONSMCP_DAILY_LIMIT=${Math.round(dailyLimit * 1_000_000)}   # ${dailyLimit.toLocaleString()} USDG per day (base units)`,
+      '',
+      '# Optional: pons launch intel via Alchemy',
+      '# PONSMCP_ALCHEMY_KEY=<key>',
+    ];
+    setEnvSnippet(lines.join('\n'));
+  }, [maxPerTx, dailyLimit]);
+
+  const validRecipient = /^0x[0-9a-fA-F]{40}$/.test(recipient);
+
   return (
-    <Card title="Server settings" subtitle="Your PonsMCP server is the account — configure it once, key never leaves the runtime.">
+    <Card title="Server settings" subtitle="Configure your agent policy — live preview of the env config, then copy to your runtime.">
       <div className="flex flex-col gap-4 p-5">
+        {/* Interactive policy config */}
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="rounded-xl p-4" style={{ background: 'rgba(255,255,255,0.04)' }}>
+            <label className="flex items-center justify-between text-xs">
+              <span className="text-white/60">Max per transaction</span>
+              <span className="font-mono text-[#fdba74]">{maxPerTx} USDG</span>
+            </label>
+            <input
+              type="range" min={1} max={100} step={1} value={maxPerTx}
+              onChange={(e) => { setMaxPerTx(Number(e.target.value)); setSaved(false); }}
+              className="mt-2 w-full accent-[#f97316]"
+            />
+            <p className="mt-1 text-[10px] text-white/30">PONSMCP_MAX_PER_TX · 1-100 USDG (protocol hard cap)</p>
+          </div>
+          <div className="rounded-xl p-4" style={{ background: 'rgba(255,255,255,0.04)' }}>
+            <label className="flex items-center justify-between text-xs">
+              <span className="text-white/60">Daily spending limit</span>
+              <span className="font-mono text-[#fdba74]">{dailyLimit.toLocaleString()} USDG</span>
+            </label>
+            <input
+              type="range" min={100} max={10000} step={100} value={dailyLimit}
+              onChange={(e) => { setDailyLimit(Number(e.target.value)); setSaved(false); }}
+              className="mt-2 w-full accent-[#f97316]"
+            />
+            <p className="mt-1 text-[10px] text-white/30">PONSMCP_DAILY_LIMIT · 100-10,000 USDG</p>
+          </div>
+        </div>
+
+        {/* Quick test recipient */}
+        <div className="rounded-xl p-4" style={{ background: 'rgba(255,255,255,0.04)' }}>
+          <label className="text-xs text-white/60">Default test recipient (optional)</label>
+          <input
+            value={recipient}
+            onChange={(e) => setRecipient(e.target.value)}
+            placeholder="0x…  (paste a wallet address)"
+            spellCheck={false}
+            className="mt-2 w-full rounded-lg px-3 py-2.5 text-xs outline-none"
+            style={{ background: 'rgba(0,0,0,0.32)', border: `1px solid ${recipient && !validRecipient ? 'rgba(248,113,113,0.5)' : 'rgba(255,255,255,0.13)'}`, color: '#fff7ed', fontFamily: "'DM Mono', monospace" }}
+          />
+          <p className="mt-1 text-[10px] text-white/30">
+            {recipient && !validRecipient ? '⚠️ Invalid address format' : 'Prefill the New payment form with this wallet (stored locally, never sent)'}
+          </p>
+          {validRecipient && (
+            <button
+              onClick={() => { localStorage.setItem('ponsmcp_default_recipient', recipient); setSaved(true); setTimeout(() => setSaved(false), 1500); }}
+              className="btn-primary mt-2 inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-bold"
+            >
+              Save to this browser
+            </button>
+          )}
+          {saved && <span className="ml-2 text-[11px] text-green-400">✓ Saved</span>}
+        </div>
+
+        {/* RPC chain info */}
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="rounded-xl p-4" style={{ background: 'rgba(255,255,255,0.04)' }}>
             <p className="text-xs text-white/40">RPC failover chain (agent → chain)</p>
@@ -64,11 +143,14 @@ export function SettingsPanel({ settingsSnippet }: { settingsSnippet: string }) 
             <p className="mt-1 font-mono text-xs break-all text-white/80">https://ponsmcp.com/api</p>
           </div>
         </div>
-        <p className="text-sm font-semibold text-white">Runtime configuration</p>
+
+        {/* Live env snippet */}
+        <p className="text-sm font-semibold text-white">Runtime configuration (live preview)</p>
         <div className="relative rounded-xl p-4" style={{ background: 'rgba(0,0,0,0.38)', border: '1px solid rgba(255,255,255,0.09)' }}>
-          <div className="absolute right-2 top-2"><CopyButtonBox value={settingsSnippet} /></div>
-          <pre className="overflow-x-auto pr-8 font-mono text-xs" style={{ color: '#f97316' }}>{settingsSnippet}</pre>
+          <div className="absolute right-2 top-2"><CopyButtonBox value={envSnippet} /></div>
+          <pre className="overflow-x-auto pr-8 font-mono text-xs" style={{ color: '#f97316' }}>{envSnippet}</pre>
         </div>
+
         <p className="text-xs leading-relaxed text-white/45">
           Paste into the environment of the process that runs <span className="font-mono text-white/70">ponsmcp</span>. The private key is generated by you — this browser never sees it, receives it, or signs with it. Generate a fresh key with: <span className="font-mono text-white/70">node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"</span> (run it offline, then fund only what the agent is allowed to spend).
         </p>
