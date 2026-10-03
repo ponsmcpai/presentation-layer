@@ -11,6 +11,19 @@ import { fmtPrice, fmtUsd, ipfsToHttp, pctColor, type LaunchRow, type SignalRow 
 export function LaunchIntelPanel() {
   const [subTab, setSubTab] = useState<'signals' | 'launches'>('signals');
   const [sourceFilter, setSourceFilter] = useState<'ALL' | 'GRADE A' | 'EARLY WATCH'>('ALL');
+  const [catFilter, setCatFilter] = useState<string>('ALL');
+  const CATS = ['ALL','MEME','AI','x402','DeFi','Infra','Other'];
+
+  // Category detection from narrative + symbol
+  function detectCat(s: SignalRow): string {
+    const txt = ((s.narrative ?? '') + ' ' + s.symbol).toLowerCase();
+    if (/\bai\b|agent|gpt|llm|neural|intelligence/.test(txt)) return 'AI';
+    if (/x402|payment|pay\b|mcp\b|rpc\b|infra|protocol|bridge|swap/.test(txt)) return 'x402';
+    if (/defi|dex|amm|yield|lend|borrow|liquidity/.test(txt)) return 'DeFi';
+    if (/node|infra|layer|chain|validator|oracle/.test(txt)) return 'Infra';
+    if (/meme|fun|doge|pepe|shib|cat|frog|dog|moon|based|ape/.test(txt)) return 'MEME';
+    return 'Other';
+  }
   const [signals, setSignals] = useState<SignalRow[] | null>(null);
   const [signalsErr, setSignalsErr] = useState('');
   const [loading, setLoading] = useState(true);
@@ -72,6 +85,10 @@ export function LaunchIntelPanel() {
               {(['ALL', 'GRADE A', 'EARLY WATCH'] as const).map((f) => (
                 <button key={f} onClick={() => setSourceFilter(f)} className="rounded-full px-3 py-1 font-mono text-[11px] font-bold" style={sourceFilter === f ? { background: 'rgba(249,115,22,0.2)', color: '#fdba74' } : { background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.4)' }}>{f}</button>
               ))}
+              <div className="mx-1 w-px bg-white/10" />
+              {CATS.map((c) => (
+                <button key={c} onClick={() => setCatFilter(c)} className="rounded-full px-3 py-1 font-mono text-[11px] font-bold" style={catFilter === c ? { background: 'rgba(96,165,250,0.18)', color: '#93c5fd' } : { background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.35)' }}>{c}</button>
+              ))}
               <button onClick={() => void loadSignals()} className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-white/10 px-3 py-1 text-xs text-white/60 hover:text-white"><RefreshCw className="h-3 w-3" /> Refresh</button>
             </div>
 
@@ -88,10 +105,10 @@ export function LaunchIntelPanel() {
                   <span>Token</span><span className="text-right">MC</span><span className="text-right">ATH dd</span><span className="text-right">Liq</span><span className="text-right">Holders</span><span>Signal</span>
                 </div>
                 <div className="divide-y" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
-                  {signals.map((s) => (
+                  {signals.filter(s => catFilter === 'ALL' || detectCat(s) === catFilter).map((s) => (
                     <button key={s.id} onClick={() => setSelected(s)} className="grid w-full grid-cols-2 items-center gap-3 px-4 py-3 text-left transition hover:bg-white/[0.04] sm:grid-cols-[2.2fr_1fr_0.9fr_1fr_1.1fr_auto]">
                       <div className="flex min-w-0 items-center gap-2.5">
-                        <TokenIcon symbol={s.symbol} size={30} />
+                        <TokenIcon symbol={s.symbol} size={30} tokenAddress={s.tokenAddress} />
                         <div className="min-w-0">
                           <p className="truncate text-xs font-bold text-white">{s.symbol}</p>
                           <p className="truncate font-mono text-[9px] text-white/30">{fmtPrice(s.priceUsd)} · {s.ageText ?? '—'}</p>

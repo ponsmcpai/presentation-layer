@@ -1,32 +1,33 @@
-import { ArrowRight, Check } from 'lucide-react';
+import { ArrowRight, Check, Zap, Radio, BarChart2, Terminal, Cpu } from 'lucide-react';
+import type { FC } from 'react';
 import { Card } from './Primitives';
 import type { Service } from './shared';
 
-const SERVICE_META: Record<string, { desc: string; features: string[]; icon: string }> = {
+const SERVICE_META: Record<string, { desc: string; features: string[]; Icon: FC<{className?:string}> }> = {
   svc_devsandbox01: {
     desc: 'One-click end-to-end test of your payment rail at micro scale. Settles for a fraction of a cent and returns a full verification breakdown.',
     features: ['Cheapest live settlement', 'Full receipt verification', 'Proves the whole rail works'],
-    icon: '⚡',
+    Icon: Zap,
   },
   svc_signalfeed01: {
     desc: 'The 10 latest notifier-captured Grade A signals as structured data: price, market cap, ATH drawdown, liquidity, holders — delivered at unlock.',
     features: ['Latest 10 Grade A signals', 'Structured JSON payload', 'Same data as Live Signals tab'],
-    icon: '📡',
+    Icon: Radio,
   },
   svc_stockscreen01: {
     desc: 'All 19 Robinhood Chain tokenized stocks live-ranked by DEX liquidity at unlock time: price, 24h change, venue — a complete market snapshot.',
     features: ['All 19 stock tokens ranked', 'Live liquidity ordering', '24h change per ticker'],
-    icon: '📈',
+    Icon: BarChart2,
   },
   svc_sdkguide01: {
     desc: 'Drop-in TypeScript quickstart for wiring an agent to PonsMCP: install, key handling, policy caps, first settlement — copy-paste ready.',
     features: ['Install & config commands', 'Working pay() example', 'Policy defaults explained'],
-    icon: '⌨',
+    Icon: Terminal,
   },
   svc_launchintel01: {
     desc: 'Live on-chain snapshot of the pons v2 launch factory computed at unlock time: config count, latest block, factory address. Fresh on every request.',
     features: ['Real chain read at unlock', 'Factory config count', 'Block-height proof'],
-    icon: '◎',
+    Icon: Cpu,
   },
 };
 
@@ -37,11 +38,11 @@ export function ServicesPanel({ services, onBuy }: { services: Service[]; onBuy:
       <Card title="Paid services" subtitle="Real deliverables, priced in USDG. Each unlocks its payload only after your agent's payment verifies on-chain.">
         <div className="grid gap-4 p-5 sm:grid-cols-2">
           {services.map((service) => {
-            const m = SERVICE_META[service.id] ?? { desc: 'Unlocks after on-chain receipt verification.', features: [], icon: '◇' };
+            const m = SERVICE_META[service.id] ?? { desc: 'Unlocks after on-chain receipt verification.', features: [], Icon: Cpu };
             return (
               <div key={service.id} className="flex flex-col rounded-2xl border border-[#f97316]/25 bg-gradient-to-b from-[#f97316]/[0.06] to-transparent p-5">
                 <div className="flex items-start justify-between gap-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-xl text-xl text-[#fdba74]" style={{ background: 'rgba(249,115,22,0.12)', border: '1px solid rgba(249,115,22,0.3)' }}>{m.icon}</div>
+                  <div className="flex h-11 w-11 items-center justify-center rounded-xl" style={{ background: 'rgba(249,115,22,0.12)', border: '1px solid rgba(249,115,22,0.3)' }}><m.Icon className="h-5 w-5 text-[#fdba74]" /></div>
                   <div className="text-right">
                     <p className="text-lg font-extrabold text-white" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>{Number(service.price_usdg).toFixed(2)}</p>
                     <p className="font-mono text-[10px] text-white/35">USDG · one-time</p>

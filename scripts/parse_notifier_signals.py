@@ -102,7 +102,22 @@ def main():
         row = parse_block(chunk, source)
         if row and row['id'] not in seen:
             seen.add(row['id']); rows.append(row)
-    rows.sort(key=lambda r: r['signal_at'], reverse=True)
-    for row in rows[:150]: print(json.dumps(row, ensure_ascii=False))
+    import datetime
+    def ts_key(r):
+        try:
+            # "03 Oct 2026 18:17:29 WIB"
+            dt = datetime.datetime.strptime(r['signal_at'].replace(' WIB','').strip(), '%d %b %Y %H:%M:%S')
+            return dt.timestamp()
+        except Exception:
+            return 0
+    rows.sort(key=ts_key, reverse=True)
+    # Dedup: newest per token_address
+    seen_tokens = {}
+    deduped = []
+    for row in rows:
+        if row['token_address'] not in seen_tokens:
+            seen_tokens[row['token_address']] = row
+            deduped.append(row)
+    for row in deduped[:150]: print(json.dumps(row, ensure_ascii=False))
 
 if __name__ == '__main__': main()
