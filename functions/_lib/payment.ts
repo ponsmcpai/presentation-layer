@@ -3,7 +3,22 @@
 
 export const USDG = '0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168';
 export const CHAIN_ID = 4663;
-export const RPC_URL = 'https://rpc.mainnet.chain.robinhood.com';
+// P2/P1 FIX: rpc.mainnet.chain.robinhood.com resolves to an ISP block page
+// on some networks and hangs instead of refusing. Use Alchemy (from env) or nodeflare.
+// NOTE: Pages Functions env is only accessible per-request; this module-level constant
+// is a safe public fallback. For Alchemy, pass env.PONSMCP_ALCHEMY_KEY at call time.
+export const RPC_URL = 'https://rpc.nodeflare.app/robinhood/public';
+const RPC_FALLBACK = 'https://lb.routeme.sh/rpc/evm/4663';
+
+// Build RPC URL list given an optional Cloudflare env binding.
+export function getRpcUrls(env?: { PONSMCP_ALCHEMY_KEY?: string }): string[] {
+  const key = env?.PONSMCP_ALCHEMY_KEY;
+  return [
+    ...(key ? [`https://robinhood-mainnet.g.alchemy.com/v2/${key}`] : []),
+    RPC_URL,
+    RPC_FALLBACK,
+  ];
+}
 export const TRANSFER_TOPIC = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
 
 export const addressOk = (value) => /^0x[0-9a-fA-F]{40}$/.test(value ?? '');
@@ -43,24 +58,33 @@ export function amountToMicro(value) {
   return { micro, display: `${whole}.${(fraction + '000000').slice(0, 6)}` };
 }
 
-export async function rpc(method, params) {
+export async function rpc(method, params, env?: { PONSMCP_ALCHEMY_KEY?: string }) {
   let last;
-  for (let attempt = 0; attempt < 4; attempt++) {
-    const response = await fetch(RPC_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'User-Agent': 'ponsmcp-payments/0.1' },
-      body: JSON.stringify({ jsonrpc: '2.0', id: crypto.randomUUID(), method, params }),
-    });
-    if (response.ok) {
-      const data = await response.json();
-      if (data.error) throw new Error(data.error.message ?? 'RPC error');
-      return data.result;
+  const urls = getRpcUrls(env);
+  for (const url of urls) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'User-Agent': 'ponsmcp-payments/0.1' },
+          body: JSON.stringify({ jsonrpc: '2.0', id: crypto.randomUUID(), method, params }),
+          signal: AbortSignal.timeout(8_000), // P2 FIX: was missing — prevents indefinite hang on blocked URL
+        });
+        if (response.ok) {
+          const data = await response.json();
+          if (data.error) throw new Error(data.error.message ?? 'RPC error');
+          return data.result;
+        }
+        last = response.status;
+        if (response.status === 429) { await new Promise(r => setTimeout(r, 600)); continue; }
+        break; // non-retryable HTTP error — try next URL
+      } catch (e: any) {
+        last = e?.message ?? 'fetch failed';
+        break; // network error — try next URL
+      }
     }
-    last = response.status;
-    if (response.status !== 429 && response.status < 500) break;
-    await new Promise((resolve) => setTimeout(resolve, 700 * (attempt + 1)));
   }
-  throw new Error(`RPC HTTP ${last ?? 'unavailable'}`);
+  throw new Error(`RPC unavailable: tried ${urls.length} endpoints, last error: ${last ?? 'unknown'}`);
 }
 
 export function verifiedUsdGTransfer(receipt, merchantAddress, amountBase) {

@@ -5,17 +5,24 @@
 // Never broadcasts. Execution stays in the agent's MCP server.
 // @ts-nocheck — Pages runtime types are provided by Cloudflare at build time.
 
-const RPCS = [
-  'https://robinhood-mainnet.g.alchemy.com/v2/alch_wXyV1PsUL90Ki4-BYN1WP',
-  'https://rpc.nodeflare.app/robinhood/public',
-];
+// RPC list is built at request time so it can read env.PONSMCP_ALCHEMY_KEY.
+// NEVER hardcode the Alchemy key in source — it ends up in the deployed bundle.
+function getRpcs(env?: { PONSMCP_ALCHEMY_KEY?: string }) {
+  const key = env?.PONSMCP_ALCHEMY_KEY;
+  return [
+    ...(key ? [`https://robinhood-mainnet.g.alchemy.com/v2/${key}`] : []),
+    'https://rpc.nodeflare.app/robinhood/public',
+    'https://lb.routeme.sh/rpc/evm/4663',
+  ];
+}
 
 const WETH = '0x0bd7d308f8e1639fab988df18a8011f41eacad73';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-async function rpc(method, params) {
+async function rpc(method, params, env?) {
+  const urls = getRpcs(env);
   for (let attempt = 0; attempt < 2; attempt++) {
-    for (const url of RPCS) {
+    for (const url of urls) {
       try {
         const res = await fetch(url, {
           method: 'POST',
@@ -40,7 +47,14 @@ function parseWei(hex) {
   return BigInt(h);
 }
 
-export async function onRequestPost({ request }) {
+export async function onRequestPost({ request, env }) {
+  // Rate limit: 30 preview calls/minute per IP to prevent Alchemy quota exhaustion.
+  const ip = request.headers.get('cf-connecting-ip') ?? 'unknown';
+  const windowStart = Math.floor(Date.now() / 60_000) * 60_000;
+  const row = await env.ponsmcp_payments.prepare(
+    'INSERT INTO api_rate_limits (bucket, client_ip, window_start, request_count) VALUES (?, ?, ?, 1) ON CONFLICT(bucket, client_ip, window_start) DO UPDATE SET request_count = request_count + 1 RETURNING request_count'
+  ).bind('launch_preview', ip, windowStart).first();
+  if (Number(row?.request_count ?? 1) > 30) return j400('rate limit exceeded — max 30 preview calls/minute');
   let body;
   try { body = await request.json(); } catch { return j400('invalid json'); }
   const token = String(body.token ?? '');
@@ -53,9 +67,9 @@ export async function onRequestPost({ request }) {
   try {
     const poolLc = pool.toLowerCase();
     const [reservesRaw, token0Raw, wethBalRaw, tokenBalRaw] = await Promise.all([
-      rpc('eth_call', [{ to: pool, data: '0x0902f1ac' }, 'latest']).catch(() => null), // getReserves() — V2 pools only
-      rpc('eth_call', [{ to: pool, data: '0x0dfe1681' }, 'latest']), // token0()
-      rpc('eth_call', [{ to: WETH, data: '0x70a08231' + poolLc.slice(2).toLowerCase().padStart(64, '0') }, 'latest']), // WETH.balanceOf(pool)
+      rpc('eth_call', [{ to: pool, data: '0x0902f1ac' }, 'latest'], env).catch(() => null), // getReserves() — V2 pools only
+      rpc('eth_call', [{ to: pool, data: '0x0dfe1681' }, 'latest'], env), // token0()
+      rpc('eth_call', [{ to: WETH, data: '0x70a08231' + poolLc.slice(2).toLowerCase().padStart(64, '0') }, 'latest'], env), // WETH.balanceOf(pool)
       rpc('eth_call', [{ to: token, data: '0x70a08231' + poolLc.slice(2).padStart(64, '0') }, 'latest']), // TOKEN.balanceOf(pool) — arg is the POOL address
     ]);
     let wethReserve, tokenReserve;

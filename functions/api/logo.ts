@@ -14,7 +14,7 @@ const ALLOWED_HOSTS = new Set([
   'axiomtrading-v2.axiom-cdn.io',
   'axiomtrading.sfo3.cdn.digitaloceanspaces.com',
   'gateway.irys.xyz',
-  'gmgn.ai',
+  // 'gmgn.ai' removed: not an image CDN — SSRF side-effect risk via CF IPs
 ]);
 
 export async function onRequestGet({ request }) {
