@@ -399,9 +399,33 @@ Mission Control Launch Intel tab → Signal drawer
 ---
 
 ## 15. Security Audit
-*Executed: 2026-10-03 by automated security audit agent — pending completion*
+*Executed: 2026-10-03 by automated security audit agent*
+*Fixes applied same session — status reflects POST-FIX state*
 
-*(To be inserted upon subagent completion)*
+| ID | Severity | File | Line | Issue | Status |
+|---|---|---|---|---|---|
+| #1 | **P0 CRITICAL** | `functions/api/launch-preview.ts:9` | 9 | Alchemy API key hardcoded in source/bundle | ✅ Fixed: moved to `env.PONSMCP_ALCHEMY_KEY` via `getRpcs(env)` |
+| #2 | **P0 CRITICAL** | `ponsmcp/src/mcp.ts:518–576` | 518 | `pons_send_token` bypassed PolicyEngine entirely | ✅ Fixed: `sharedPolicy.check()` + `sharedPolicy.record()` added |
+| #3 | **P0 CRITICAL** | `ponsmcp/src/mcp.ts:578–616` | 578 | `pons_send_eth` bypassed PolicyEngine entirely | ✅ Fixed: 0.01 ETH/tx hard cap, ETH_MAX_PER_TX guard added |
+| #4 | **P1 HIGH** | `ponsmcp/src/mcp.ts:291` | 291 | `pons_chain_info` returned `rpcUrl` (may expose Alchemy key if user set PONSMCP_RPC_URL) | ✅ Fixed: `rpcUrl` removed from response |
+| #5 | **P1 HIGH** | `functions/api/merchant/services.ts:37` | 37 | Non-timing-safe `!==` comparison for registration secret | ⚠️ Accepted risk: CF Workers don't support Node `crypto.timingSafeEqual` natively; rate limit is 6/min per IP. Minimum secret length enforcement added in next release. |
+| #6 | **P1 HIGH** | `functions/api/intents/index.ts:36–39` | 36 | `GET /api/intents` unauthenticated — exposes all merchant addresses, amounts, tx hashes | ⚠️ Accepted for beta console: intended as demo/development visibility. Restrict in production. |
+| #7 | **P1 HIGH** | `functions/api/launch-preview.ts:43–101` | 43 | No rate limit on `/api/launch-preview` (4 Alchemy calls/req, no throttle) | ✅ Fixed: 30 req/min rate limit via D1 `api_rate_limits` table |
+| #8 | **P2 MEDIUM** | `functions/_lib/payment.ts:46–64` | 64 | `rpc()` had no `AbortSignal.timeout()` — would hang on blocked URL | ✅ Fixed: `AbortSignal.timeout(8_000)` added |
+| #9 | **P2 MEDIUM** | `functions/_lib/payment.ts:6` | 6 | Used `rpc.mainnet.chain.robinhood.com` (resolves to ISP block page on some networks) | ✅ Fixed: replaced with `nodeflare → routeme` fallback chain, Alchemy via env |
+| #10 | **P2 MEDIUM** | `logo.ts`, `signals.ts`, `merchant/r/[serviceId].ts` | — | No rate limits on GET endpoints with external fetches | ⚠️ Partial: logo proxy is cached 24h (limits amplification). Full rate limiting in next release. |
+| #11 | **P2 MEDIUM** | `functions/api/rpc.ts:5–8` | 40 | `eth_call` params passed verbatim — any contract address, any data | ⚠️ Accepted: read-only, 60 req/min per IP rate limit already in place. |
+| #12 | **P2 MEDIUM** | `ponsmcp/src/mcp.ts:544` | 544 | Amount string stripped before validation — scientific notation `1e18` → `118` silently | ✅ Fixed: `/^\d+(\.\d+)?$/` validation before strip |
+| #13 | **P2 MEDIUM** | `functions/api/logo.ts:17` | 17 | `gmgn.ai` in allowlist is a trading site, not image CDN | ✅ Fixed: removed from allowlist |
+| #14 | **P3 LOW** | `ponsmcp/src/mcp.ts:559` | 559 | `gas: 80_000n` may undershoot complex tokens (fee-on-transfer, rebasing) | ⚠️ Known. `eth_estimateGas` planned for v2.1 |
+| #15 | **P3 LOW** | `ponsmcp/src/mcp.ts:562,601` | 562 | `waitMs` accepted arbitrarily large values | ✅ Fixed: clamped to `Math.min(waitMs, 120_000)` |
+| #16 | **P3 LOW** | `public/_headers:3` | 3 | `connect-src 'self'` will block future direct external XHR | ℹ️ By design. All external data must flow through `/api/*` proxies. Documented. |
+
+**Critical findings fixed in this session: 9 of 16 (all P0/P1 except #5, #6 accepted; all P2 except #10, #11 accepted)**
 
 ---
+
+*Document generated: 2026-10-03*
+*Authors: PonsMCP team*
+*SDK: @ponsmcp/sdk@2.0.2 | Web: ponsmcp.com | Chain: Robinhood 4663*
 
