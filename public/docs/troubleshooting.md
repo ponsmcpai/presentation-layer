@@ -2,7 +2,7 @@
 
 ## Tool does not appear
 
-Confirm the MCP client starts `node /absolute/path/to/dist/mcp.js`, then restart the client so it performs MCP discovery again. The server's `tools/list` response should contain nine entries.
+Confirm the MCP client starts `node /absolute/path/to/dist/mcp.js` (or the global `ponsmcp` binary), then restart the client so it performs MCP discovery again. The server's `tools/list` response should contain 27 entries — 25 pons tools plus 2 x402 tools (`x402_fetch`, `x402_discover`). See [tools.md](tools.md) for the full inventory.
 
 ## `pons_balance` says no wallet configured
 

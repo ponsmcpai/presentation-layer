@@ -53,4 +53,4 @@ const status = await client.txStatus('0x…')
 
 ## Read tools (no wallet needed)
 
-`price()`, `tokenInfo()`, plus the MCP tools `pons_launch_info` / `pons_launch_market` for pons v1 tokens.
+`price()`, `tokenInfo()`, plus the MCP tools `pons_launch_info` / `pons_launch_market` for pons v1 tokens. All 27 MCP tools are listed in the [tool reference](../tools.md); the x402 tools are documented in [x402-compatibility.md](../x402-compatibility.md).

@@ -7,6 +7,8 @@ RPC: set `PONSMCP_ALCHEMY_KEY` to route all chain reads through Alchemy (recomme
 
 2. **payment execution** — quote USDG, apply local limits, sign from the configured agent wallet, broadcast, and inspect receipts.
 
+3. **x402 compatibility** — agents using the x402 convention (`HTTP 402` + `X-PAYMENT` headers) can fetch paid resources with automatic settlement: see [x402-compatibility.md](x402-compatibility.md).
+
 ## Documentation structure
 
 ```
@@ -20,6 +22,7 @@ docs/
 │   ├── typescript-sdk.md        # Full SDK guide
 │   ├── merchant-integration.md  # Accept agent payments
 │   └── security.md              # Keys, policy, signing
+├── x402-compatibility.md        # x402 protocol support and paid-resource fetch
 └── api/
     ├── sdk-reference.md         # Client API
     └── intents-api.md           # Intents + merchant registry
@@ -28,11 +31,13 @@ docs/
 ## Quick links
 
 - [What is MPP?](concepts/mpp-protocol.md)
+- [x402 compatibility](x402-compatibility.md)
 - [Robinhood Chain settlement](concepts/robinhood-settlement.md)
 - [TypeScript SDK guide](guides/typescript-sdk.md)
 - [Merchant integration](guides/merchant-integration.md)
 - [SDK reference](api/sdk-reference.md)
 - [Payment intents API](api/intents-api.md)
+- [Tool reference](tools.md)
 
 ## Honest availability
 

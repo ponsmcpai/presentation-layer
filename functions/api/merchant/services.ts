@@ -2,6 +2,24 @@
 // @ts-nocheck — Cloudflare Pages supplies D1 runtime bindings.
 import { addressOk, json, readJson, rateLimit } from '../../_lib/payment';
 
+// Constant-time secret comparison for Workers (no node:crypto timingSafeEqual).
+// Hashing both sides with SHA-256 first makes the byte strings fixed-length
+// (32 bytes) and uniform, so the final XOR loop cannot leak length or content
+// through early-exit timing. A hash collision is cryptographically impossible
+// to engineer from a guessed secret.
+export async function timingSafeEqualStr(a, b) {
+  const enc = new TextEncoder();
+  const [ha, hb] = await Promise.all([
+    crypto.subtle.digest('SHA-256', enc.encode(String(a ?? ''))),
+    crypto.subtle.digest('SHA-256', enc.encode(String(b ?? ''))),
+  ]);
+  let diff = 0;
+  const va = new Uint8Array(ha);
+  const vb = new Uint8Array(hb);
+  for (let i = 0; i < va.length; i++) diff |= va[i] ^ vb[i];
+  return diff === 0;
+}
+
 function serviceRow(row) {
   return {
     id: row.id,
@@ -34,7 +52,10 @@ export async function onRequestPost({ request, env }) {
     const expectedSecret = env.MERCHANT_REGISTRATION_SECRET;
     if (!expectedSecret) return json({ error: 'Merchant registration is not open yet' }, 503);
     const body = await readJson(request);
-    if (String(body.registration_secret ?? '') !== expectedSecret) return json({ error: 'Invalid registration secret' }, 401);
+    // P1 FIX: plain string compare leaked secret length/prefix bytes via timing.
+    if (!await timingSafeEqualStr(String(body.registration_secret ?? ''), expectedSecret)) {
+      return json({ error: 'Invalid registration secret' }, 401);
+    }
     const merchant = String(body.merchant_address ?? '').toLowerCase();
     if (!addressOk(merchant)) return json({ error: 'merchant_address must be an EVM address' }, 400);
     const name = String(body.name ?? '').slice(0, 60).trim();

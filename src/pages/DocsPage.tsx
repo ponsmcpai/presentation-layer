@@ -43,16 +43,29 @@ const ROWS: Record<DocSection, Array<[string, string, string]>> = {
     ['pons_price', '—', 'PONS market snapshot'],
     ['pons_launch_info', 'token', 'pons v1 metadata, pool, socials'],
     ['pons_launch_market', 'token', 'live pairs, price, liquidity'],
+    ['pons_launch_feed', 'limit?', 'recent launches from the official feed'],
+    ['pons_graduated_launches', 'limit?', 'v1 launches that hit their liquidity threshold'],
+    ['pons_launch_ranking', 'limit?, sortBy?', 'ranked launches with Grade A / Early Watch tiers'],
+    ['pons_v2_launch', 'token', 'pons v2 factory launch record'],
+    ['pons_v2_snipe_tax', 'curve, recipient', 'decaying opening tax read'],
+    ['pons_v2_quote_buy', 'reserves + fees', 'pure curve buy quote'],
+    ['pons_v2_quote_sell', 'reserves + fees', 'pure curve sell quote'],
+    ['pons_escrow_balance', 'recipient', 'claimable native fees (v2 escrow)'],
+    ['pons_escrow_token_balance', 'recipient, token', 'claimable ERC-20 fees (v2 escrow)'],
     ['pons_token_info', 'token', 'ERC-20 name/symbol/supply'],
     ['pons_balance', 'token?', 'agent wallet balance (needs key)'],
     ['pons_quote', 'amountUsd', 'USD → USDG base units, no execution'],
     ['pons_pay', 'payTo, amountUsd', 'policy → sign → broadcast → receipt'],
     ['pons_pay_resource', 'url', 'fetch 402 → parse → settle exact price'],
-    ['pons_v2_launch', 'token', 'pons v2 factory launch record'],
-    ['pons_v2_snipe_tax', 'curve, recipient', 'decaying opening tax read'],
-    ['pons_v2_quote_buy', 'reserves + fees', 'pure curve buy quote'],
-    ['pons_v2_quote_sell', 'reserves + fees', 'pure curve sell quote'],
     ['pons_tx_status', 'txHash', 'receipt + decoded transfers'],
+    ['x402_fetch', 'url', 'fetch any URL, auto-settle x402 402s, retry with proof'],
+    ['x402_discover', 'domain', 'probe a domain for x402 paid resources'],
+    ['pons_stocks_list', '—', 'all 19 tokenized stock tokens + addresses'],
+    ['pons_stock_price', 'ticker', 'live DEX price for a stock token'],
+    ['pons_stock_info', 'ticker', 'on-chain stock token metadata'],
+    ['pons_stocks_screen', 'minLiq?, gradeA?', 'screen + rank all 19 stock tokens'],
+    ['pons_send_token', 'to, token, amount', 'send any ERC-20 (policy capped)'],
+    ['pons_send_eth', 'to, amountEth', 'send native ETH (policy capped)'],
   ],
   flow: [],
   security: [],
@@ -205,7 +218,7 @@ ponsmcp`}</Code>
                   </div>
                 ))}
               </div>
-              <p className="mt-4 text-sm leading-7 text-white/60">Only <span className="font-mono text-[#fdba74]">pons_pay</span> and <span className="font-mono text-[#fdba74]">pons_pay_resource</span> move funds. Everything else is read-only and needs no wallet.</p>
+              <p className="mt-4 text-sm leading-7 text-white/60">Five tools move funds: <span className="font-mono text-[#fdba74]">pons_pay</span>, <span className="font-mono text-[#fdba74]">pons_pay_resource</span>, <span className="font-mono text-[#fdba74]">pons_send_token</span>, <span className="font-mono text-[#fdba74]">pons_send_eth</span>, and <span className="font-mono text-[#fdba74]">x402_fetch</span> (only when the target answers 402). Everything else is read-only and needs no wallet.</p>
 
               <h3 className="mt-8 text-lg font-bold text-white">Payment tools in detail</h3>
               <div className="mt-3 grid gap-3">

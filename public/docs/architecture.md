@@ -27,7 +27,7 @@ Robinhood Chain RPC + DexScreener market API
 
 ## RPC behavior
 
-The runtime uses the official public Robinhood Chain endpoint by default and can use a fallback for reads when that endpoint fails. Operators who require a particular provider should set `PONSMCP_RPC_URL` explicitly.
+The runtime uses the public chain-4663 endpoint (`rpc.nodeflare.app/robinhood/public`) by default with a read/broadcast fallback (`lb.routeme.sh/rpc/evm/4663`). Calls are concurrency-limited and time-boxed so one slow endpoint cannot consume an MCP host's tool-call budget. Operators who require a particular provider should set `PONSMCP_RPC_URL` explicitly, or set `PONSMCP_ALCHEMY_KEY` to route reads through Alchemy first.
 
 ## Web console
 

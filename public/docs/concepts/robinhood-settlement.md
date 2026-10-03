@@ -7,7 +7,7 @@ PonsMCP settles agent payments in **USDG** on **Robinhood Chain** (chain ID 4663
 | Chain ID | 4663 |
 | Settlement token | USDG — `0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168` (6 decimals) |
 | Gas token | ETH |
-| Public RPC | `https://rpc.mainnet.chain.robinhood.com` |
+| Public RPC | `https://rpc.nodeflare.app/robinhood/public` (default), `https://lb.routeme.sh/rpc/evm/4663` (read fallback); pin your own with `PONSMCP_RPC_URL` or set `PONSMCP_ALCHEMY_KEY` |
 | Explorer | `https://robinhoodchain.blockscout.com` |
 | PONS reference token | `0x39dBED3a2bd333467115dE45665cC57F813C4571` |
 

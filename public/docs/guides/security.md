@@ -20,8 +20,8 @@
 
 ## RPC
 
-- Primary: official public Robinhood Chain endpoint.
-- Fallback (reads and broadcasts): `rpc.nodeflare.app/robinhood/public` — an operator may pin a single trusted endpoint with `PONSMCP_RPC_URL`.
+- Primary: `https://rpc.nodeflare.app/robinhood/public` — a public chain-4663 endpoint, verified live (chain ID `0x1237`).
+- Fallback (reads and broadcasts): `https://lb.routeme.sh/rpc/evm/4663`. An operator may pin a single trusted endpoint with `PONSMCP_RPC_URL` or set `PONSMCP_ALCHEMY_KEY` for Alchemy-routed reads.
 - Transactions are signed **locally before** broadcast, so no endpoint can alter amounts or recipients.
 
 ## For merchants

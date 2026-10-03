@@ -30,4 +30,4 @@ USDG has six decimals. `1000000` base units equals `1 USDG`.
 
 ## Tool names
 
-Every configured MCP client discovers the nine tool names exactly as listed in [tools.md](tools.md). A client should call `tools/list` after initialization instead of hard-coding a stale inventory.
+Every configured MCP client discovers the 27 tool names exactly as listed in [tools.md](tools.md). A client should call `tools/list` after initialization instead of hard-coding a stale inventory.

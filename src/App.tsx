@@ -3,6 +3,7 @@ import './App.css';
 import { ThemeProvider } from '@/hooks/useTheme';
 import { Navbar } from '@/sections/Navbar';
 import { Hero } from '@/sections/Hero';
+import { HowItWorks } from '@/sections/HowItWorks';
 import { Features } from '@/sections/Features';
 import { Developers } from '@/sections/Developers';
 import { TokenBenefits } from '@/sections/TokenBenefits';
@@ -16,6 +17,7 @@ function HomePage() {
     <>
       <main>
         <Hero />
+        <HowItWorks />
         <Features />
         <Developers />
         <TokenBenefits />

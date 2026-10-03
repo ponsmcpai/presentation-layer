@@ -16,4 +16,4 @@ Agents can complete every step without UI: parse the 402 body, decide whether th
 
 ## What PonsMCP adds
 
-PonsMCP packages this loop into an MCP server: `pons_quote` to preview, `pons_pay` to settle with policy enforcement, `pons_tx_status` to independently confirm. Pons launch-intelligence tools sit alongside so agents can also research pons tokens before deciding to pay for paid data about them.
+PonsMCP packages this loop into an MCP server: `pons_quote` to preview, `pons_pay` to settle with policy enforcement, `pons_tx_status` to independently confirm. Pons launch-intelligence tools sit alongside so agents can also research pons tokens before deciding to pay for paid data about them. For services that speak the x402 convention (requirements in `X-PAYMENT` headers), `x402_fetch` and `x402_discover` automate the entire discover → pay → retry loop — see [x402-compatibility.md](../x402-compatibility.md).

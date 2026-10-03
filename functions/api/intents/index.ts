@@ -33,8 +33,17 @@ export async function onRequestPost({ request, env }) {
 }
 
 // GET /api/intents?limit=20 — most recent intents, public demo control plane.
+// P1 FIX: this list is unauthenticated, so pay_to (merchant wallet) is now
+// redacted to first-6 + last-4 (e.g. 0x82ff…7533). Full address still returns
+// from POST /api/intents, where the caller supplied it themselves.
 export async function onRequestGet({ request, env }) {
   const limit = Math.min(Math.max(Number(new URL(request.url).searchParams.get('limit') ?? 20), 1), 100);
   const result = await env.ponsmcp_payments.prepare('SELECT * FROM payment_intents ORDER BY created_at DESC LIMIT ?').bind(limit).all();
-  return json({ intents: (result.results ?? []).map(publicIntent) });
+  return json({ intents: (result.results ?? []).map((row) => ({ ...publicIntent(row), payment: { ...publicIntent(row).payment, pay_to: redactAddress(publicIntent(row).payment.pay_to) } })) });
+}
+
+// Show first 6 + last 4 characters only: "0x82ff4d…7533".
+function redactAddress(address) {
+  if (!address || address.length < 12) return address ?? null;
+  return `${address.slice(0, 6)}…${address.slice(-4)}`;
 }

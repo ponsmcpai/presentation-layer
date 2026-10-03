@@ -2,8 +2,16 @@
 // Returns latest signal per token, newest first. Sourced from /root/grade_a_signals.txt
 // via scripts/parse_notifier_signals.py -> market_signals table.
 // @ts-nocheck — Pages runtime types are provided by Cloudflare at build time.
+import { rateLimit } from '../_lib/payment';
 
 export async function onRequestGet({ request, env }) {
+  // P2 FIX: DB read was unmetered — cap at 30 queries/min/IP (feed polls every 30s+).
+  if (!await rateLimit(request, env, 'signals_read', 30)) {
+    return new Response(JSON.stringify({ error: 'Rate limit exceeded; retry in a minute' }), {
+      status: 429,
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+    });
+  }
   const url = new URL(request.url);
   const source = url.searchParams.get('source'); // 'GRADE A' | 'EARLY WATCH' | null
   const limit = Math.min(Number(url.searchParams.get('limit') ?? 60), 100);

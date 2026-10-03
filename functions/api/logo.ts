@@ -3,6 +3,7 @@
 // and streamed through this endpoint. Only https URLs from known pinata/IPFS
 // gateways are allowed — this is not an open proxy.
 // @ts-nocheck — Pages runtime types are provided by Cloudflare at build time.
+import { rateLimit } from '../_lib/payment';
 
 const ALLOWED_HOSTS = new Set([
   'flap.mypinata.cloud',
@@ -17,7 +18,12 @@ const ALLOWED_HOSTS = new Set([
   // 'gmgn.ai' removed: not an image CDN — SSRF side-effect risk via CF IPs
 ]);
 
-export async function onRequestGet({ request }) {
+export async function onRequestGet({ request, env }) {
+  // P1 FIX: was unauthenticated and unfetched-per-host — cap at 10 fetches/min/IP.
+  // Cached hits bypass this (cache.match below), so repeat views stay cheap.
+  if (!await rateLimit(request, env, 'logo_proxy', 10)) {
+    return new Response('Rate limit exceeded; retry in a minute', { status: 429 });
+  }
   const url = new URL(request.url);
   const target = url.searchParams.get('url') ?? '';
   let parsed;
