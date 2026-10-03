@@ -124,12 +124,15 @@ const TOOL_GROUPS: Array<{ group: string; note: string; tools: Array<[string, st
     ['pons_send_token', 'Send any ERC-20 by ticker or address', true],
     ['pons_send_eth', 'Send native ETH', true],
   ]},
+  { group: 'BATCH PAYMENT', note: 'Multi-recipient USDG disbursements in one call', tools: [
+    ['pons_pay_batch', 'Send USDG to multiple recipients atomically — policy-checked, each transfer individually receipt-verified on-chain', true],
+  ]},
 ];
 
 export function McpToolsPanel() {
   return (
     <div className="grid gap-5">
-      <Card title="MCP tool surface" subtitle={`25 tools · ${TOOL_GROUPS.length} categories · zero runtime dependencies`}>
+      <Card title="MCP tool surface" subtitle={`26 tools · ${TOOL_GROUPS.length} categories · zero runtime dependencies`}>
         <div className="grid gap-5 p-5">
           {TOOL_GROUPS.map((g) => (
             <div key={g.group}>

@@ -4,7 +4,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   Activity, ArrowRight, Bot, Boxes, CircleDollarSign, FileCheck2, Gauge, Loader2,
-  Menu, Network, Receipt, Settings, ShieldCheck, X,
+  Menu, Network, Receipt, Rocket, Settings, ShieldCheck, X,
 } from 'lucide-react';
 import { Step, Card } from '@/components/Primitives';
 import { StatStrip, ActivityPanel, ChainStatusPanel, McpConnectCard } from '@/components/StatusPanels';
@@ -13,6 +13,7 @@ import { ReceiptsPanel } from '@/components/ReceiptsPanel';
 import { AgentPanel } from '@/components/AgentPanel';
 import { ServicesPanel, McpToolsPanel } from '@/components/ServicesPanel';
 import { LaunchIntelPanel } from '@/components/LaunchIntelPanel';
+import { LaunchpadPanel } from '@/components/LaunchpadPanel';
 import { IntegrationPanel, PolicyPanel, SettingsPanel, Sidebar } from '@/components/MiscPanels';
 import { rpc, hexToBig, addrOk, type Quote, type Live, type IntentRow, type Service } from '@/components/shared';
 
@@ -32,6 +33,7 @@ const NAV = [
   { group: 'CAPABILITIES', items: [
     { key: 'MCP tools', icon: Boxes },
     { key: 'Launch intel', icon: Activity },
+    { key: 'Launchpad', icon: Rocket },
   ] },
   { group: 'DEVELOPER', items: [
     { key: 'Integration', icon: Network },
@@ -389,6 +391,9 @@ export function AppPage() {
 
           {/* ============ TAB: LAUNCH INTEL ============ */}
           {tab === 'Launch intel' && <LaunchIntelPanel />}
+
+          {/* ============ TAB: LAUNCHPAD ============ */}
+          {tab === 'Launchpad' && <LaunchpadPanel />}
 
           {/* ============ TAB: INTEGRATION / POLICY / SETTINGS ============ */}
           {tab === 'Integration' && <IntegrationPanel />}
