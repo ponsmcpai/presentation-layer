@@ -15,7 +15,7 @@ export function StatStrip({
       {([
         {
           label: '$MCP token',
-          value: mcpPrice ? `$${mcpPrice.priceUsd}` : 'Loading…',
+          value: mcpPrice ? `$${mcpPrice.priceUsd}` : '—',
           sub: mcpPrice?.change24h != null ? `MCP · 24h ${mcpPrice.change24h >= 0 ? '+' : ''}${mcpPrice.change24h.toFixed(1)}%` : 'MCP · live on Uniswap V4 (RH)',
           live: true,
           href: 'https://dexscreener.com/robinhood/0x50a505074173d50d7d21d45e19d3a94202dfce860273100d1c19008051e9475f',
@@ -23,7 +23,7 @@ export function StatStrip({
         },
         { label: 'Latest block', value: live.block, sub: 'Robinhood Chain · 4663', live: true },
         { label: 'Network gas', value: live.gas, sub: 'Gas token: ETH', live: true },
-        { label: 'MCP tools', value: '25 tools', sub: 'Reads · payments · stocks · launches', live: false },
+        { label: 'MCP tools', value: '27 tools', sub: 'Pay · x402 · stocks · intel', live: false },
       ]).map(({ label, value, sub, live: isLive, href, changeColor }) => {
         const content = (
           <>

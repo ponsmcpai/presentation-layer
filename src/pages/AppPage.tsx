@@ -43,7 +43,7 @@ const NAV = [
 type Tab = (typeof NAV)[number]['items'][number]['key'];
 
 export function AppPage() {
-  const [tab, setTab] = useState<Tab>('New payment');
+  const [tab, setTab] = useState<Tab>('Agent runner');
   const [navOpen, setNavOpen] = useState(false);
   const [merchant, setMerchant] = useState('');
   const [amount, setAmount] = useState('5.00');

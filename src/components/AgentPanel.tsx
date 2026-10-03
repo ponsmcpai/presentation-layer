@@ -74,10 +74,26 @@ export function AgentPanel() {
     } finally { setBusy(false); }
   }
 
+  async function runSignals() {
+    setBusy(true);
+    try {
+      push({ role: 'agent', text: 'Fetching latest Grade A signals from the notifier pipeline...', tool: 'pons_launch_ranking', ts: Date.now() });
+      const res = await fetch('/api/signals?limit=5&source=GRADE%20A');
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'failed');
+      const sigs = data.signals ?? [];
+      if (!sigs.length) { push({ role: 'agent', text: 'No Grade A signals found right now.', ts: Date.now() }); return; }
+      const top3 = sigs.slice(0, 3).map((s: any) => `${s.symbol} — MC $${((s.marketCapUsd ?? 0) / 1000).toFixed(1)}K, liq $${((s.liquidityUsd ?? 0) / 1000).toFixed(1)}K, ${s.holdersTotal ?? '?'} holders`).join(' · ');
+      push({ role: 'agent', text: `${sigs.length} Grade A signals right now. Top: ${top3}. Full breakdown in the Launch intel tab.`, ts: Date.now() });
+    } catch (e: any) { push({ role: 'agent', text: `Error: ${e?.message ?? 'unknown'}`, ts: Date.now() }); }
+    finally { setBusy(false); }
+  }
+
   const quick = [
     { label: 'Pay sandbox 0.01', fn: runIntent, icon: CircleDollarSign },
     { label: 'Chain state', fn: runChainInfo, icon: FileText },
     { label: 'Screen market', fn: runScreener, icon: Bot },
+    { label: 'Grade A signals', fn: runSignals, icon: Send },
   ];
 
   return (
