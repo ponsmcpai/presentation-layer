@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import {
   Activity, ArrowRight, Bot, Boxes, CircleDollarSign, FileCheck2, Gauge, Link2, Loader2,
-  Menu, Network, Receipt, Rocket, Settings, ShieldCheck, X,
+  Menu, Network, Receipt, Settings, ShieldCheck, X,
 } from 'lucide-react';
 import { Step, Card } from '@/components/Primitives';
 import { StatStrip, ActivityPanel, ChainStatusPanel, McpConnectCard } from '@/components/StatusPanels';
@@ -14,7 +14,6 @@ import { ReceiptsPanel } from '@/components/ReceiptsPanel';
 import { AgentPanel } from '@/components/AgentPanel';
 import { ServicesPanel, McpToolsPanel } from '@/components/ServicesPanel';
 import { LaunchIntelPanel } from '@/components/LaunchIntelPanel';
-import { LaunchpadPanel } from '@/components/LaunchpadPanel';
 import { IntegrationPanel, PolicyPanel, SettingsPanel, Sidebar } from '@/components/MiscPanels';
 import { rpc, hexToBig, addrOk, type Quote, type Live, type IntentRow, type Service } from '@/components/shared';
 
@@ -34,7 +33,6 @@ const NAV = [
   { group: 'CAPABILITIES', items: [
     { key: 'MCP tools', icon: Boxes },
     { key: 'Launch intel', icon: Activity },
-    { key: 'Launchpad', icon: Rocket },
   ] },
   { group: 'DEVELOPER', items: [
     { key: 'Integration', icon: Network },
@@ -54,7 +52,6 @@ const TAB_SLUGS: Record<string, string> = {
   'Services': 'services',
   'MCP tools': 'tools',
   'Launch intel': 'intel',
-  'Launchpad': 'launchpad',
   'Integration': 'integration',
   'Policy': 'policy',
   'Settings': 'settings',
@@ -64,6 +61,7 @@ const SLUG_TO_TAB = Object.fromEntries(Object.entries(TAB_SLUGS).map(([k, v]) =>
 export function AppPage() {
   const { slug } = useParams<{ slug?: string }>();
   const [tab, setTab] = useState<Tab>(() => {
+    if (slug === 'launchpad') return 'Launch intel' as Tab; // legacy slug
     if (slug && SLUG_TO_TAB[slug]) return SLUG_TO_TAB[slug] as Tab;
     return 'Agent runner';
   });
@@ -433,7 +431,6 @@ export function AppPage() {
           {tab === 'Launch intel' && <LaunchIntelPanel />}
 
           {/* ============ TAB: LAUNCHPAD ============ */}
-          {tab === 'Launchpad' && <LaunchpadPanel />}
 
           {/* ============ TAB: INTEGRATION / POLICY / SETTINGS ============ */}
           {tab === 'Integration' && <IntegrationPanel />}

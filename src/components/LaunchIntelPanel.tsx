@@ -6,10 +6,11 @@ import { SignalDrawer } from './SignalDrawer';
 import { LaunchDrawer } from './LaunchDrawer';
 import { TradePreview } from './TradePreview';
 import { fmtPrice, fmtUsd, ipfsToHttp, pctColor, type LaunchRow, type SignalRow } from './shared';
+import { FactoryParamsCard, CostCalculator, LaunchGuide, ScanInteresting, type FactoryParams } from './LaunchTools';
 
 // ── Main Market Intel panel ─────────────────────────────────────────────
 export function LaunchIntelPanel() {
-  const [subTab, setSubTab] = useState<'signals' | 'launches'>('signals');
+  const [subTab, setSubTab] = useState<'signals' | 'launches' | 'launch'>('signals');
   const [sourceFilter, setSourceFilter] = useState<'ALL' | 'GRADE A' | 'EARLY WATCH'>('ALL');
   const [catFilter, setCatFilter] = useState<string>('ALL');
   const CATS = ['ALL','MEME','AI','x402','DeFi','Infra','Other'];
@@ -33,6 +34,41 @@ export function LaunchIntelPanel() {
   const [selected, setSelected] = useState<SignalRow | null>(null);
   const [selectedLaunch, setSelectedLaunch] = useState<LaunchRow | null>(null);
   const [tradeLaunch, setTradeLaunch] = useState<LaunchRow | null>(null);
+  const [params, setParams] = useState<FactoryParams | null>(null);
+
+  const FACTORY = '0x7eD598BcEf8bd9Edd8C97A195C6d13f40801EC7e';
+  const loadParams = useCallback(async () => {
+    try {
+      const rpcCall = async (sel: string) => {
+        const res = await fetch('/api/rpc', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ jsonrpc: '2.0', id: Date.now(), method: 'eth_call', params: [{ to: FACTORY, data: '0x' + sel }, 'latest'] }),
+        });
+        const d = await res.json();
+        if (d.error) throw new Error('rpc');
+        return d.result as string;
+      };
+      const hexToBig = (h: string) => { try { return BigInt(h); } catch { return 0n; } };
+      const [fee, enabled, maxTax, snipeStart, snipeSecs, cfgCount, gasP] = await Promise.all([
+        rpcCall('cf3cf573'), rpcCall('236a4afb'), rpcCall('f325a5fb'),
+        rpcCall('50e25ac2'), rpcCall('6783774b'), rpcCall('ae72d871'),
+        (async () => {
+          const res = await fetch('/api/rpc', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_gasPrice', params: [] }) });
+          const d = await res.json(); return d.result as string;
+        })(),
+      ]);
+      setParams({
+        launchFeeEth: (Number(hexToBig(fee)) / 1e18).toFixed(4),
+        enabled: hexToBig(enabled) === 1n,
+        maxCreatorTaxBps: Number(hexToBig(maxTax)),
+        snipeTaxStartBps: Number(hexToBig(snipeStart)),
+        snipeTaxSeconds: Number(hexToBig(snipeSecs)),
+        configCount: Number(hexToBig(cfgCount)),
+        gasPriceGwei: (Number(hexToBig(gasP)) / 1e9).toFixed(3),
+      });
+    } catch { /* factory read is best-effort */ }
+  }, []);
 
   const loadSignals = useCallback(async () => {
     setLoading(true); setSignalsErr('');
@@ -59,6 +95,7 @@ export function LaunchIntelPanel() {
 
   useEffect(() => { if (subTab === 'signals') void loadSignals(); }, [subTab, loadSignals]);
   useEffect(() => { if (subTab === 'launches') void loadLaunches(); }, [subTab, loadLaunches]);
+  useEffect(() => { if (subTab === 'launch') void loadParams(); }, [subTab, loadParams]);
 
   const tierColor = (tier: string) =>
     tier === 'Graduated' ? { bg: 'rgba(74,222,128,0.12)', fg: '#86efac' }
@@ -70,9 +107,9 @@ export function LaunchIntelPanel() {
     <div className="grid gap-5">
       {/* Sub tabs */}
       <div className="grid grid-cols-2 gap-1 rounded-xl p-1" style={{ background: 'rgba(16,16,16,0.62)', border: '1px solid rgba(255,255,255,0.1)' }}>
-        {(['signals', 'launches'] as const).map((s) => (
+        {(['signals', 'launches', 'launch'] as const).map((s) => (
           <button key={s} onClick={() => setSubTab(s)} className="rounded-lg py-2 text-xs font-bold uppercase tracking-wide" style={subTab === s ? { background: 'rgba(249,115,22,0.18)', color: '#fdba74' } : { color: 'rgba(255,255,255,0.4)' }}>
-            {s === 'signals' ? 'Live signals' : 'Launch feed'}
+            {s === 'signals' ? 'Live signals' : s === 'launches' ? 'Launch feed' : 'Launch a token'}
           </button>
         ))}
       </div>
@@ -172,6 +209,17 @@ export function LaunchIntelPanel() {
             )}
           </div>
         </Card>
+      )}
+
+      {subTab === 'launch' && (
+        <div className="grid gap-5">
+          <FactoryParamsCard params={params} err="" loading={false} onRetry={() => void loadParams()} />
+          <CostCalculator params={params} />
+          <div className="grid gap-5 lg:grid-cols-2">
+            <LaunchGuide />
+            <ScanInteresting launches={launches?.launches ?? null} />
+          </div>
+        </div>
       )}
 
       {selected && <SignalDrawer signal={selected} onClose={() => setSelected(null)} />}
