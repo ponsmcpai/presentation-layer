@@ -23,7 +23,7 @@ export function StatStrip({
         },
         { label: 'Latest block', value: live.block, sub: 'Robinhood Chain · 4663', live: true },
         { label: 'Network gas', value: live.gas, sub: 'Gas token: ETH', live: true },
-        { label: 'MCP tools', value: '33 tools', sub: 'Pay · batch · x402 · stocks', live: false },
+        { label: 'MCP tools', value: '37 tools', sub: 'Pay · trade · mandates · x402', live: false },
       ]).map(({ label, value, sub, live: isLive, href, changeColor }) => {
         const content = (
           <>
